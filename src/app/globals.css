@@ -1,0 +1,287 @@
+@import "tailwindcss";
+
+/* ──────────────────────────────────────────────────────────────
+   wewillfind.it — design tokens
+   Lost = coral · Found = blue · Bounty = gold · Reunited = green
+   Reputation / special = violet · Ink = deep navy
+   Every text/background pairing used by components meets WCAG AA.
+   ────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* Coral — brand + "lost". 600 is the AA-safe fill for white text */
+  --color-coral-50: #fff1f3;
+  --color-coral-100: #ffe3e8;
+  --color-coral-200: #ffc9d3;
+  --color-coral-300: #ff9fb0;
+  --color-coral-400: #ff6b87;
+  --color-coral-500: #ff3b5c;
+  --color-coral-600: #e11d48;
+  --color-coral-700: #be123c;
+  --color-coral-800: #9f1239;
+  --color-coral-900: #4c0519;
+
+  /* Found blue */
+  --color-found-50: #eef3ff;
+  --color-found-100: #dfe8ff;
+  --color-found-200: #c3d3ff;
+  --color-found-300: #98b0ff;
+  --color-found-400: #6a89ff;
+  --color-found-500: #3d63f2;
+  --color-found-600: #2b4fdb;
+  --color-found-700: #2341b3;
+  --color-found-800: #1f3791;
+  --color-found-900: #1b2f72;
+
+  /* Bounty gold */
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+
+  /* Reunited / success green */
+  --color-mint-50: #ecfdf3;
+  --color-mint-100: #d3f8e2;
+  --color-mint-200: #a8f0c7;
+  --color-mint-400: #34d399;
+  --color-mint-500: #16b66a;
+  --color-mint-600: #12935a;
+  --color-mint-700: #0f7a4b;
+  --color-mint-800: #0f6040;
+  --color-mint-900: #0c4a33;
+
+  /* Reputation violet */
+  --color-violet-50: #f6f1ff;
+  --color-violet-100: #ece2ff;
+  --color-violet-200: #dac8ff;
+  --color-violet-300: #c2a3ff;
+  --color-violet-400: #a57bff;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #7a3fe8;
+  --color-violet-700: #6a2fd0;
+  --color-violet-800: #5626a8;
+
+  /* Navy ink + soft blue-greys */
+  --color-navy-50: #f4f6fb;
+  --color-navy-100: #e9edf6;
+  --color-navy-200: #d6dcec;
+  --color-navy-300: #b3bdd6;
+  --color-navy-400: #5f6b86; /* AA on white, canvas and tinted surfaces for small text */
+  --color-navy-500: #56627f;
+  --color-navy-600: #4b5877;
+  --color-navy-700: #2f3b60;
+  --color-navy-800: #1a2850;
+  --color-navy-900: #0e1a3a;
+  --color-navy-950: #080f26;
+
+  --color-canvas: #f6f7fb;
+  --color-line: #e6e9f2;
+  --color-sky: #e8f1ff;
+
+  --radius-card: 1.25rem;
+  --radius-sheet: 1.75rem;
+
+  --shadow-soft: 0 1px 2px rgb(14 26 58 / 0.04), 0 8px 24px -10px rgb(14 26 58 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(14 26 58 / 0.05), 0 18px 40px -14px rgb(14 26 58 / 0.22);
+  --shadow-pop: 0 4px 10px rgb(14 26 58 / 0.08), 0 30px 70px -20px rgb(14 26 58 / 0.35);
+  --shadow-coral: 0 10px 24px -8px rgb(225 29 72 / 0.55);
+  --shadow-found: 0 10px 24px -8px rgb(43 79 219 / 0.5);
+
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-fade-up: fade-up 0.55s var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 0.35s ease-out both;
+  --animate-scale-in: scale-in 0.28s var(--ease-out-soft) both;
+  --animate-sheet-up: sheet-up 0.38s var(--ease-out-soft) both;
+  --animate-pop: pop 0.5s var(--ease-spring) both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-float: float 5s ease-in-out infinite;
+  --animate-ping-soft: ping-soft 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  --animate-draw: draw 0.6s 0.15s ease-out both;
+  --animate-toast-in: toast-in 0.4s var(--ease-spring) both;
+  --animate-confetti: confetti-fall 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) both;
+  --animate-typing: typing 1s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes pop {
+    0% { opacity: 0; transform: scale(0.4); }
+    60% { opacity: 1; transform: scale(1.12); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes ping-soft {
+    0% { transform: scale(1); opacity: 0.55; }
+    80%, 100% { transform: scale(2.4); opacity: 0; }
+  }
+  @keyframes draw {
+    from { stroke-dashoffset: 60; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes confetti-fall {
+    0% { transform: translate3d(0, -20px, 0) rotate(0); opacity: 1; }
+    100% { transform: translate3d(var(--dx, 0px), 260px, 0) rotate(var(--rot, 540deg)); opacity: 0; }
+  }
+  @keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-3px); opacity: 1; }
+  }
+}
+
+:root {
+  color-scheme: light;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --header-h: 4.25rem;
+  --tabbar-h: 4.5rem;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-navy-900);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: clip;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--color-coral-200);
+  color: var(--color-navy-900);
+}
+
+/* Visible, high-contrast focus on every interactive element */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--color-navy-900);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+.on-dark :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+:where(.on-dark):focus-visible {
+  outline-color: #fff;
+}
+
+/* Utility layer — tiny, shared helpers */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+@utility pb-safe {
+  padding-bottom: calc(var(--safe-bottom) + 0.75rem);
+}
+@utility skeleton {
+  background: linear-gradient(100deg, var(--color-navy-100) 30%, #fff 50%, var(--color-navy-100) 70%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+@utility glass {
+  background: rgb(255 255 255 / 0.96);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+}
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Native <dialog> as our modal / bottom-sheet primitive */
+dialog.overlay {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  max-width: 100vw;
+  max-height: 100dvh;
+  overflow: visible;
+}
+dialog.overlay::backdrop {
+  background: rgb(8 15 38 / 0.5);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.25s ease-out both;
+}
+
+/* Leaflet theming — OSM raster tiles, softened to sit quietly under our pins */
+.wwf-tiles {
+  filter: saturate(0.55) contrast(0.92) brightness(1.06);
+}
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: #e8eef9;
+  outline: none;
+}
+.leaflet-div-icon {
+  background: transparent !important;
+  border: 0 !important;
+}
+.leaflet-control-attribution {
+  font-size: 10px !important;
+  border-top-left-radius: 8px;
+  background: rgb(255 255 255 / 0.8) !important;
+}
+.leaflet-control-zoom {
+  border: 0 !important;
+  box-shadow: var(--shadow-soft) !important;
+  border-radius: 14px !important;
+  overflow: hidden;
+}
+.leaflet-control-zoom a {
+  width: 38px !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  color: var(--color-navy-900) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

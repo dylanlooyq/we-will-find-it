@@ -1,0 +1,98 @@
+# wewillfind.it
+
+**Singapore's Lost & Found Community** — post what you lost or found, get matched, message safely, offer bounties, and recognise the people who help.
+
+> When someone loses something, the community helps find it.
+> When someone finds something, the community helps return it.
+
+This is a complete, mock-data web app (no backend yet). Everything you can see works end-to-end in the browser; state persists in `localStorage`.
+
+## Run it
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+npm run build && npm start   # production
+```
+
+Needs Node 20+. Built with **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript** and **Tailwind CSS v4**. Icons: `lucide-react`. Map: `leaflet` + OpenStreetMap tiles.
+
+## Deploy to GitHub Pages
+
+Pushing to `main` runs `.github/workflows/deploy-pages.yml`, which builds a static export and publishes it. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. The site is then served at `https://<owner>.github.io/<repo>/`.
+
+```bash
+npm run build:pages     # static export into ./out, with the /<repo>/ base path (read from the git remote)
+npm run preview:pages   # serve ./out like GitHub Pages does → http://localhost:4173/<repo>/
+```
+
+`npm run dev` / `build` / `start` are unaffected — the Pages build is switched on only by `STATIC_EXPORT=true` (set by `build:pages`). Things worth knowing:
+
+- Listings, members and chats created during a demo session don't exist as files, so GitHub Pages answers those URLs with `404.html`; `StaticHostFallback` (in `not-found.tsx`) renders the right screen from the browser's saved demo data instead.
+- A `<owner>.github.io` repo drops the `/<repo>/` base path automatically. For a custom domain, set `NEXT_PUBLIC_SITE_URL` (e.g. `https://wewillfind.it`) in the workflow's build step (`env:` on "Build static site") — a URL without a path means no base path.
+- `robots.txt` and `sitemap.xml` only take effect when the site is served from a domain root.
+
+## Try the journeys
+
+You start signed in as **Dylan L.** (Level 5 · Community Hero). The account menu (top right) has *Demo accounts* to switch persona, and *Reset demo data*.
+
+| Journey | Where to start |
+| --- | --- |
+| **Loser** — post, get matches, chat, reunite | **Post** → *I lost something* → publish → *Potential matches* → open a match → chat → *Item returned* |
+| **Finder** — post a found item, owner contacts you, earn points | **Post** → *I found something* → publish (+10 pts). Open **Messages → Joel T.** → *Item returned* (+30 pts) |
+| **Bounty finder** — claim, proof, owner verifies, release | `/item/iphone-14-pro-orchard` → *Claim S$200 Bounty*. The owner "reviews" after a few seconds; then *I've handed it over* → bounty released, +50 pts, badge unlock |
+| **Bounty owner** — verify claims | `/item/brown-leather-wallet-tampines-mall` (Dylan's own post) → review Cheryl's claim → *Approve* → *Mark as received* |
+| **Pet owner** — lost pet, reunite | **Post** → *I lost a pet*. Browse `/pets` |
+| **Moderator** | Account menu → *Switch to Wei Ming K.* → `/admin` |
+
+## Replacing placeholder photos
+
+Item images show a labelled placeholder (**"Image of …"**) until a real photo exists.
+
+1. Open **`/dev/images`** — it lists every slot with its exact file name.
+2. Save the photo (JPG/PNG/WebP) as that file name in `public/images/items/`.
+3. Run `npm run images` (also runs automatically before `dev` / `build`). The placeholder is swapped for the photo.
+
+## Project map
+
+```
+src/
+  app/
+    layout.tsx            root: font, metadata, toasts, post chooser
+    (main)/               header + footer + mobile tab bar
+      page.tsx            home
+      (browse)/           explore · lost · found · pets (shared layout keeps filters mounted)
+      map · bounties · leaderboard · user/[handle] · notifications · my-posts
+      how-it-works · safety · dev/images
+    (immersive)/item/[slug]   listing detail (own sticky action bar)
+    (flow)/               posting + bounty-claim flows (no site chrome)
+    (app)/messages/       split-view inbox + thread
+    (auth)/               login · signup · forgot-password · verify-email · welcome
+    (admin)/admin/        moderation: posts · users · reports · bounties · matches · resolved
+    icon.svg · apple-icon · opengraph-image · manifest · robots · sitemap
+  components/
+    ui/                   Button, Badges, Avatar, Overlay (Modal + BottomSheet), forms, toasts, skeletons…
+    items/ post/ bounties/ chat/ community/ leaderboard/ profile/ notifications/ admin/ home/ map/ layout/ brand/
+  lib/
+    types.ts              the domain model (User, Item, Bounty, Claim, Conversation, Message, …)
+    data/                 realistic Singapore seed data
+    world.ts              seed + local overlay → what screens read
+    store/                client demo store (actions, events, simulated replies)
+    matching.ts           pluggable matching service (mock scorer today)
+```
+
+## Architecture notes (for the backend swap)
+
+- **One seam for data.** Screens read a `World` (`src/lib/world.ts`) via `useWorld()`; server components read `seedWorld`. A backend replaces `buildWorld`'s inputs and the action functions in `src/lib/store/store.ts` — components don't change.
+- **Matching** sits behind a `MatchingService` interface (`src/lib/matching.ts`).
+- **Payments/bounties** are UI + mock state. Nothing moves money.
+- **Auth** is mock. No secrets live in the frontend.
+- **Time** uses a fixed demo clock (`src/lib/clock.ts`) so prerendering is deterministic.
+- **Next 16 Cache Components:** avoid `Date.now()`/`Math.random()` in server/prerendered code; wrap `useSearchParams`/`usePathname` readers in `<Suspense>`. Dynamic routes list their known params in `generateStaticParams`.
+
+## Before going live
+
+- Replace OpenStreetMap's public tile server with a commercial/own tile provider (OSM's server is for light use).
+- Replace the hero illustration and placeholders with real photography where desired.
+- Connect a real backend for auth, listings, messaging, matching and payments (escrow partner for bounties).
+- Add rate limiting, image moderation and an audit log for the moderation tools.
