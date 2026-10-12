@@ -10,19 +10,20 @@ export interface Mail {
   footnote: string;
 }
 
-const FROM = { name: "wewillfind.it", email: "noreply@wewillfind.it" };
+// Sent through Resend (resend.com); wewillfind.it must be a verified sending domain in that account.
+const FROM = "wewillfind.it <noreply@wewillfind.it>";
 
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 const isLocal = (env: Env) => new URL(env.SITE_URL).hostname === "localhost";
 
-/** False on a deployed site whose email binding hasn't been set up yet — sign-up by email can't work there. */
-export const canSendEmail = (env: Env) => Boolean(env.EMAIL) || isLocal(env);
+/** False on a deployed site with no Resend key yet — sign-up by email can't work there. */
+export const canSendEmail = (env: Env) => Boolean(env.RESEND_API_KEY) || isLocal(env);
 
 export async function sendEmail(env: Env, mail: Mail): Promise<void> {
   const text = `${mail.intro}\n\n${mail.action.label}: ${mail.action.url}\n\n${mail.footnote}`;
-  if (!env.EMAIL) {
-    // Local development: print the email instead, so the link can be opened by hand.
+  if (!env.RESEND_API_KEY) {
+    // Local development without a key: print the email instead, so the link can be opened by hand.
     console.log(`[email] To: ${mail.to}\nSubject: ${mail.subject}\n\n${text}\n`);
     return;
   }
@@ -40,7 +41,12 @@ export async function sendEmail(env: Env, mail: Mail): Promise<void> {
   </body>
 </html>`;
   try {
-    await env.EMAIL.send({ from: FROM, to: mail.to, subject: mail.subject, text, html });
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: FROM, to: mail.to, subject: mail.subject, text, html }),
+    });
+    if (!res.ok) throw new Error(`Resend answered ${res.status}: ${await res.text()}`);
   } catch (err) {
     // Runs after the response has gone out (waitUntil), so the log is the only place this can surface.
     console.error(`[email] failed to send "${mail.subject}"`, err);

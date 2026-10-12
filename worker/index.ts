@@ -12,7 +12,7 @@ export default {
     const { pathname } = new URL(request.url);
     if (!pathname.startsWith("/api/auth/")) return Response.json({ message: "Not found" }, { status: 404 });
 
-    // Until email sending is set up, refuse up front rather than create accounts nobody can verify.
+    // Until the Resend key is set, refuse up front rather than create accounts nobody can verify.
     if (NEEDS_EMAIL.has(pathname) && !canSendEmail(env)) {
       return Response.json({ code: "EMAIL_NOT_CONFIGURED", message: "Email sign-up isn't available yet." }, { status: 503 });
     }

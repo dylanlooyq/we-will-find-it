@@ -4,6 +4,6 @@ interface Env {
   /** Google OAuth client — "Continue with Google" is off until both are set. */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
-  /** Cloudflare Email Sending binding — email sign-up is off until it is added to wrangler.jsonc. */
-  EMAIL?: SendEmail;
+  /** Resend API key — email sign-up is off until it is set. */
+  RESEND_API_KEY?: string;
 }

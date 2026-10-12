@@ -57,8 +57,9 @@ What is real and what isn't: the account (name, email, password or Google identi
 
 - `BETTER_AUTH_SECRET` — signs session cookies. Already set; changing it signs everyone out.
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — switch on "Continue with Google". Create an OAuth client (type *Web application*) in Google Cloud Console with the redirect URI `https://<site>/api/auth/callback/google`, one client per environment.
+- `RESEND_API_KEY` — switches on email sign-up (see Email below).
 
-**Email.** Verification and password-reset emails go out through an `EMAIL` binding (Cloudflare Email Sending, see `worker/email.ts`). Until that binding is added to `wrangler.jsonc`, a deployed site refuses email sign-up with "Email sign-up isn't available yet"; locally the email is printed in the `dev:api` terminal instead, link included.
+**Email.** Verification and password-reset emails are sent through [Resend](https://resend.com) from `noreply@wewillfind.it` (see `worker/email.ts`), which needs `wewillfind.it` verified as a sending domain in the Resend account. Until `RESEND_API_KEY` is set, a deployed site refuses email sign-up with "Email sign-up isn't available yet"; locally, without a key, the email is printed in the `dev:api` terminal instead, link included.
 
 **Database changes.** The schema lives in `migrations/`. `npm run db:schema` prints the SQL for anything `worker/auth.ts` needs that the migrations don't create yet (after upgrading better-auth, say). Save it as the next migration and apply it with `npm run db:migrate:dev` / `db:migrate:prod` before deploying the code that needs it — deploys don't run migrations.
 
