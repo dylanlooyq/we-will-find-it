@@ -212,21 +212,43 @@ export function draftToInput(d: Draft): NewItemInput {
   };
 }
 
-/** A non-persisted Item used for the live preview card. */
-export function draftPreviewItem(d: Draft, nowIso: string, ownerId: string): Item {
-  const input = draftToInput(d);
-  return {
-    id: "preview",
-    slug: "preview",
-    status: "active",
-    moderation: "ok",
-    postedAt: nowIso,
-    ownerId,
-    likes: 0,
-    comments: 0,
-    views: 0,
-    ...input,
-    title: input.title || (d.type === "lost" ? "What did you lose?" : "What did you find?"),
-    images: input.images.length ? input.images : [{ file: "preview", label: input.title || "your photo goes here" }],
+/** A live listing back in the form's terms, to edit it. `bountyAmount` is the bounty still on offer, if any. */
+export function itemToDraft(item: Item, bountyAmount?: number): Draft {
+  const pet = item.category === "pets" ? item.pet : undefined;
+  const detail = (label: string) => item.details.find((x) => x.label === label);
+  const marks = detail("Unique marks");
+  // Singapore wall-clock time, as "YYYY-MM-DDTHH:MM…"
+  const at = new Date(Date.parse(item.occurredAt) + 8 * 3_600_000).toISOString();
+  const band = TIME_BANDS.find((b) => item.timeLabel === b.label || item.timeLabel.endsWith(b.phrase));
+  const exact = !band && /around/i.test(item.timeLabel);
+  const d: Draft = {
+    ...emptyDraft(item.type, at.slice(0, 10)),
+    pet: !!pet,
+    images: item.images,
+    title: pet ? "" : item.title,
+    description: item.description,
+    category: pet ? null : item.category,
+    brand: detail("Brand")?.value ?? "",
+    model: detail("Model")?.value ?? "",
+    colour: pet ? "" : (detail("Colour")?.value ?? ""),
+    marks: marks?.value ?? "",
+    marksPrivate: marks ? !!marks.hidden : true,
+    species: pet?.species ?? "dog",
+    petName: pet?.name ?? "",
+    breed: pet?.breed ?? "",
+    petColour: pet?.colour ?? "",
+    age: pet?.age ?? "",
+    collar: pet?.collar ?? "",
+    microchip: pet?.microchip ?? "",
+    locationId: item.locationId,
+    locationNote: item.locationNote ?? "",
+    timeMode: band ? "band" : exact ? "exact" : "unsure",
+    band: band?.id ?? "",
+    time: exact ? at.slice(11, 16) : "",
+    bounty: !!bountyAmount,
+    bountyAmount: String(bountyAmount ?? 50),
   };
+  // A description we wrote for them follows the title and place instead of going stale.
+  if (draftToInput({ ...d, description: "" }).description === item.description) d.description = "";
+  return d;
 }

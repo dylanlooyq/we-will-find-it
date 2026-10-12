@@ -261,6 +261,57 @@ function resolve(d: Draft, ctx: Ctx, item: Item, finderId: string | undefined, s
   }
 }
 
+/** The parts of a listing its owner writes, checked. Shared by posting and editing. */
+function listingFields(input: Record<string, unknown>, ctx: Ctx) {
+  const title = text(input.title, "Title", 90, 3);
+  const locationId = text(input.locationId, "Location", 60);
+  if (!locationById[locationId]) fail("invalid", "Pick a location from the list.");
+  const occurredMs = Date.parse(text(input.occurredAt, "Date", 40));
+  if (Number.isNaN(occurredMs) || occurredMs > ctx.nowMs + DAY) fail("invalid", "That date isn't valid.");
+
+  const details: IdentifyingDetail[] = list(input.details ?? [], "Details", 12).map((v) => {
+    const o = record(v, "Detail");
+    return { label: text(o.label, "Detail", 40), value: text(o.value, "Detail", 160), ...(o.hidden === true && { hidden: true }) };
+  });
+  let pet: PetDetails | undefined;
+  if (input.pet != null) {
+    const p = record(input.pet, "Pet details");
+    pet = {
+      species: oneOf(p.species, ["dog", "cat", "other"] as const, "Species"),
+      name: optText(p.name, "Pet name", 40),
+      breed: text(p.breed, "Breed", 60, 0),
+      colour: text(p.colour, "Colour", 60, 0),
+      age: optText(p.age, "Age", 40),
+      collar: optText(p.collar, "Collar", 80),
+      microchip: optText(p.microchip, "Microchip", 40),
+      contactNote: optText(p.contactNote, "Contact note", 160),
+    };
+  }
+  return {
+    title,
+    description: text(input.description, "Description", 2000, 0),
+    category: oneOf(input.category, Object.keys(categoryById) as CategoryId[], "Category"),
+    images: list(input.images ?? [], "Photos", 8).map((v) => image(v, ctx)),
+    locationId,
+    locationNote: optText(input.locationNote, "Location note", 160),
+    occurredAt: new Date(occurredMs).toISOString(),
+    timeLabel: text(input.timeLabel, "Time", 40, 0),
+    details,
+    pet,
+  };
+}
+
+/** The bounty a listing asks for, in whole dollars. 0 means none. */
+function bountyAmount(input: Record<string, unknown>): number {
+  const amount = input.bountyAmount == null ? 0 : Number(input.bountyAmount);
+  if (!Number.isFinite(amount) || amount > MAX_BOUNTY) fail("invalid", `Bounties can be up to ${formatMoney(MAX_BOUNTY)}.`);
+  return amount > 0 ? Math.round(amount) : 0;
+}
+
+function newBounty(ctx: Ctx, id: string, itemId: string, amount: number): Bounty {
+  return { id, itemId, amount, currency: "SGD", status: "open", createdAt: ctx.nowIso, expiresAt: new Date(ctx.nowMs + 30 * DAY).toISOString() };
+}
+
 function newProfile(d: Draft, w: World, ctx: Ctx, account: AuthAccount): User {
   const name = account.name.trim() || "Member";
   const first = slugify(name.split(" ")[0]) || "member";
@@ -340,53 +391,20 @@ const recipes = {
     const me = requireMe(d);
     const input = record(raw, "Listing");
     const type = oneOf(input.type, ["lost", "found"] as const, "Listing type");
-    const title = text(input.title, "Title", 90, 3);
-    const locationId = text(input.locationId, "Location", 60);
-    if (!locationById[locationId]) fail("invalid", "Pick a location from the list.");
-    const occurredAt = text(input.occurredAt, "Date", 40);
-    const occurredMs = Date.parse(occurredAt);
-    if (Number.isNaN(occurredMs) || occurredMs > ctx.nowMs + DAY) fail("invalid", "That date isn't valid.");
+    const fields = listingFields(input, ctx);
     const recent = w.items.filter((i) => i.ownerId === me.id && Date.parse(i.postedAt) > ctx.nowMs - DAY).length;
     if (recent >= MAX_POSTS_PER_DAY) fail("forbidden", "You've posted a lot today. Please try again tomorrow.");
 
-    const details: IdentifyingDetail[] = list(input.details ?? [], "Details", 12).map((v) => {
-      const o = record(v, "Detail");
-      return { label: text(o.label, "Detail", 40), value: text(o.value, "Detail", 160), ...(o.hidden === true && { hidden: true }) };
-    });
-    let pet: PetDetails | undefined;
-    if (input.pet != null) {
-      const p = record(input.pet, "Pet details");
-      pet = {
-        species: oneOf(p.species, ["dog", "cat", "other"] as const, "Species"),
-        name: optText(p.name, "Pet name", 40),
-        breed: text(p.breed, "Breed", 60, 0),
-        colour: text(p.colour, "Colour", 60, 0),
-        age: optText(p.age, "Age", 40),
-        collar: optText(p.collar, "Collar", 80),
-        microchip: optText(p.microchip, "Microchip", 40),
-        contactNote: optText(p.contactNote, "Contact note", 160),
-      };
-    }
-
-    const base = slugify(`${title} ${locationById[locationId].name}`) || "listing";
+    const base = slugify(`${fields.title} ${locationById[fields.locationId].name}`) || "listing";
     let slug = base;
     while (w.itemBySlug.has(slug)) slug = `${slug}-${ctx.token}`;
     const id = `itm_${slug.replace(/-/g, "_")}`;
 
     let bountyId: string | undefined;
-    const amount = input.bountyAmount == null ? 0 : Number(input.bountyAmount);
+    const amount = bountyAmount(input);
     if (type === "lost" && amount > 0) {
-      if (!Number.isFinite(amount) || amount > MAX_BOUNTY) fail("invalid", `Bounties can be up to ${formatMoney(MAX_BOUNTY)}.`);
       bountyId = `bty_${slug.replace(/-/g, "_")}`;
-      d.bounties[bountyId] = {
-        id: bountyId,
-        itemId: id,
-        amount: Math.round(amount),
-        currency: "SGD",
-        status: "open",
-        createdAt: ctx.nowIso,
-        expiresAt: new Date(ctx.nowMs + 30 * DAY).toISOString(),
-      };
+      d.bounties[bountyId] = newBounty(ctx, bountyId, id, amount);
     }
 
     const item: Item = {
@@ -395,19 +413,10 @@ const recipes = {
       type,
       status: "active",
       moderation: "ok",
-      title,
-      description: text(input.description, "Description", 2000, 0),
-      category: oneOf(input.category, Object.keys(categoryById) as CategoryId[], "Category"),
-      images: list(input.images ?? [], "Photos", 8).map((v) => image(v, ctx)),
-      locationId,
-      locationNote: optText(input.locationNote, "Location note", 160),
-      occurredAt: new Date(occurredMs).toISOString(),
-      timeLabel: text(input.timeLabel, "Time", 40, 0),
+      ...fields,
       postedAt: ctx.nowIso,
       ownerId: me.id,
       bountyId,
-      details,
-      pet,
       likes: 0,
       comments: 0,
       views: 0,
@@ -437,6 +446,37 @@ const recipes = {
     }
     return item;
   }) satisfies Recipe<NewItemInput, Item>,
+
+  /**
+   * The owner corrects a listing that is already live. Its address, its type (lost or found) and
+   * everything people have done with it stay as they are. A bounty can be added, changed or withdrawn
+   * only until a finder has claimed it.
+   */
+  updateItem: ((d, _w, ctx, { itemId, input: raw }) => {
+    const me = requireMe(d);
+    const item = need(d.items[itemId], "listing");
+    if (item.ownerId !== me.id) fail("forbidden", "Only the person who posted this can edit it.");
+    if (item.status === "resolved") fail("invalid", "This listing has already been reunited.");
+    const input = record(raw, "Listing");
+    Object.assign(item, listingFields(input, ctx));
+
+    if (item.type === "lost") {
+      const amount = bountyAmount(input);
+      const bounty = item.bountyId ? d.bounties[item.bountyId] : undefined;
+      if (bounty && (bounty.status === "claimed" || bounty.status === "approved")) {
+        if (amount !== bounty.amount) fail("conflict", "A finder has claimed this bounty, so it can't be changed now.");
+      } else if (bounty && bountyOnOffer(bounty)) {
+        if (amount > 0) bounty.amount = amount;
+        else bounty.status = "cancelled";
+      } else if (amount > 0) {
+        // None yet, or one that was withdrawn: a fresh 30-day offer.
+        const id = item.bountyId ?? `bty_${item.slug.replace(/-/g, "_")}`;
+        d.bounties[id] = newBounty(ctx, id, item.id, amount);
+        item.bountyId = id;
+      }
+    }
+    return item;
+  }) satisfies Recipe<{ itemId: string; input: NewItemInput }, Item>,
 
   toggleLike: ((d, _w, _ctx, { itemId }) => {
     const me = requireMe(d);

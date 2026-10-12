@@ -453,48 +453,68 @@ export function ReviewStep({
   steps,
   signedIn,
   loginHref,
+  editing = false,
+  bountyLocked = false,
 }: {
   draft: Draft;
   go: (s: StepId) => void;
   steps: StepId[];
   signedIn: boolean;
   loginHref: string;
+  /** Changing a live listing rather than posting a new one. */
+  editing?: boolean;
+  /** A finder has claimed the bounty: it is shown, but can't be changed. */
+  bountyLocked?: boolean;
 }) {
   const lost = draft.type === "lost";
   const title = titleOf(draft) || (lost ? "Untitled lost item" : "Untitled found item");
   const loc = draft.locationId ? getLocation(draft.locationId) : null;
-  const rows: { step: StepId; label: string; value: ReactNode }[] = [
+  const rows: { step?: StepId; label: string; value: ReactNode }[] = [
     { step: "photos", label: "Photos", value: draft.images.length ? `${draft.images.length} added` : "None yet" },
     { step: draft.pet ? "pet" : "details", label: draft.pet ? "Pet" : "Item", value: title },
     { step: "where", label: "Where", value: loc ? `${loc.name}${draft.locationNote ? ` · ${draft.locationNote}` : ""}` : "—" },
     { step: "when", label: "When", value: `${formatDate(`${draft.date}T12:00:00+08:00`)} · ${timeLabelOf(draft)}` },
   ];
-  if (steps.includes("bounty")) rows.push({ step: "bounty", label: "Bounty", value: draft.bounty ? <strong className="text-gold-800">{formatMoney(Number(draft.bountyAmount) || 0)}</strong> : "No bounty" });
+  if (steps.includes("bounty") || bountyLocked) {
+    rows.push({ step: bountyLocked ? undefined : "bounty", label: "Bounty", value: draft.bounty ? <strong className="text-gold-800">{formatMoney(Number(draft.bountyAmount) || 0)}</strong> : "No bounty" });
+  }
 
   return (
-    <StepShell title={lost ? "Ready to post?" : "Ready to publish?"} body="Take a last look. You can edit any of it from your post afterwards.">
+    <StepShell
+      title={editing ? "Edit your post" : lost ? "Ready to post?" : "Ready to publish?"}
+      body={editing ? "Change anything below, then save. Your post keeps its link, messages and claims." : "Take a last look. You can edit any of it from your post afterwards."}
+    >
       <dl className="divide-y divide-line rounded-card bg-white px-5 shadow-soft">
-        {rows.map((r) => (
-          <div key={r.label} className="flex items-center gap-4 py-4">
-            <dt className="w-20 shrink-0 text-sm font-semibold text-navy-500">{r.label}</dt>
-            <dd className="min-w-0 flex-1 truncate text-[0.95rem] font-bold text-navy-900">{r.value}</dd>
-            <button type="button" onClick={() => go(r.step)} className="shrink-0 text-sm font-bold text-coral-700 hover:underline">
-              Edit
-            </button>
+        {rows.map(({ step, label, value }) => (
+          <div key={label} className="flex items-center gap-4 py-4">
+            <dt className="w-20 shrink-0 text-sm font-semibold text-navy-500">{label}</dt>
+            <dd className="min-w-0 flex-1 truncate text-[0.95rem] font-bold text-navy-900">{value}</dd>
+            {step ? (
+              <button type="button" onClick={() => go(step)} className="shrink-0 text-sm font-bold text-coral-700 hover:underline">
+                Edit
+              </button>
+            ) : (
+              <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-navy-500">
+                <Lock className="size-3.5" aria-hidden /> Claimed
+              </span>
+            )}
           </div>
         ))}
       </dl>
+      {bountyLocked && <p className="text-sm leading-relaxed text-navy-600">A finder has claimed the bounty, so it can&rsquo;t be changed now.</p>}
 
-      <div className="rounded-card bg-mint-50 p-5 text-sm text-mint-900">
-        <p className="flex items-center gap-2 font-extrabold">
-          <Star className="size-4" aria-hidden /> What happens next
-        </p>
-        <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-mint-800">
-          <li>Your post goes live instantly and we look for matches.</li>
-          <li>You&rsquo;ll be notified of messages, claims and matches.</li>
-          <li>Details you marked private stay private until someone proves it.</li>
-        </ul>
-      </div>
+      {!editing && (
+        <div className="rounded-card bg-mint-50 p-5 text-sm text-mint-900">
+          <p className="flex items-center gap-2 font-extrabold">
+            <Star className="size-4" aria-hidden /> What happens next
+          </p>
+          <ul className="mt-2.5 list-disc space-y-1.5 pl-5 text-mint-800">
+            <li>Your post goes live instantly and we look for matches.</li>
+            <li>You&rsquo;ll be notified of messages, claims and matches.</li>
+            <li>Details you marked private stay private until someone proves it.</li>
+          </ul>
+        </div>
+      )}
 
       {!signedIn && (
         <div className="rounded-card bg-gold-50 p-5 ring-1 ring-gold-200">

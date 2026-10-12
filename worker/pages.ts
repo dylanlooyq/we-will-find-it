@@ -12,7 +12,7 @@ import { load } from "./world.ts";
  * and writes its title, description and photo into the page head.
  */
 
-const ROUTE = /^\/(item|user|messages)\/([^/]+)(\/claim)?\/?$/;
+const ROUTE = /^\/(item|user|messages)\/([^/]+)(\/(?:claim|edit))?\/?$/;
 
 interface Head {
   title: string;
@@ -54,12 +54,12 @@ export async function page(request: Request, env: Env): Promise<Response> {
   const route = url.pathname.match(ROUTE);
   if (asset.status !== 404 || request.method !== "GET" || !route) return asset;
 
-  const [, kind, key, claim] = route;
+  const [, kind, key, form] = route;
   const headers = new Headers(asset.headers);
   headers.delete("ETag");
   headers.set("Cache-Control", "no-cache");
-  // Conversations and claim forms are private screens: the shell, a 200, and nothing for crawlers.
-  if (kind === "messages" || claim) return new Response(asset.body, { status: 200, headers });
+  // Conversations, claim forms and edit forms are private screens: the shell, a 200, and nothing for crawlers.
+  if (kind === "messages" || form) return new Response(asset.body, { status: 200, headers });
 
   const head = await headFor(env, kind, decodeURIComponent(key));
   if (!head) return new Response(asset.body, { status: 404, headers });

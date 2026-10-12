@@ -166,6 +166,7 @@ export function refreshWorld(full = false): Promise<void> {
 
 /** Forget this browser's copy — on log-out, so the next person on this device starts clean. */
 export function forgetWorld() {
+  for (const p of pending) answer(p, false);
   pending = [];
   savePending();
   rev = -1;
@@ -258,6 +259,14 @@ async function send(p: Pending): Promise<void> {
 
 let flushing = false;
 
+/** Screens waiting to hear whether the API took an action, by nonce (see `run`). */
+const waiting = new Map<string, (saved: boolean) => void>();
+
+function answer(p: Pending, saved: boolean) {
+  waiting.get(p.nonce)?.(saved);
+  waiting.delete(p.nonce);
+}
+
 /** Send unanswered actions one at a time, in the order they were made. */
 async function flush() {
   if (flushing) return;
@@ -267,6 +276,7 @@ async function flush() {
       const p = pending[0];
       try {
         await send(p);
+        answer(p, true);
       } catch (err) {
         // Refused or undeliverable: undo it here, and whatever was built on top of it.
         pending = pending.filter((x) => x !== p);
@@ -274,6 +284,7 @@ async function flush() {
         rebase();
         toast(err instanceof ActionError ? err.message : "We couldn't save that. Check your connection and try again.", { tone: "error" });
         if (!(err instanceof ActionError)) void refreshWorld(true);
+        answer(p, false);
       }
     }
   } finally {
@@ -286,8 +297,9 @@ const nonce = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) =
 /**
  * Do something as the signed-in member: apply it here now, send it to the API in the background.
  * Returns the action's result, or `null` (after telling the member why) if it isn't allowed.
+ * `saved` is for the few screens that leave right afterwards: it settles once the API has answered.
  */
-function run<N extends ActionName>(name: N, args: ActionArgs<N>): { result: ActionResult<N> } | null {
+function run<N extends ActionName>(name: N, args: ActionArgs<N>): { result: ActionResult<N>; saved: Promise<boolean> } | null {
   ensureLoaded();
   const p: Pending = { name, args, nonce: nonce() };
   try {
@@ -297,8 +309,9 @@ function run<N extends ActionName>(name: N, args: ActionArgs<N>): { result: Acti
     state = applied.state;
     notify();
     for (const e of applied.events) emit(e);
+    const saved = new Promise<boolean>((resolve) => waiting.set(p.nonce, resolve));
     void flush();
-    return { result: applied.result };
+    return { result: applied.result, saved };
   } catch (err) {
     if (!(err instanceof ActionError)) throw err;
     toast(err.message, err.code === "unauthorized" ? { tone: "info", href: "/login" } : { tone: "error" });
@@ -327,6 +340,11 @@ export const actions = {
   /* Listings */
   createItem(input: NewItemInput): Item | null {
     return run("createItem", input)?.result ?? null;
+  },
+
+  /** Save changes to your own live listing. Settles once the API has answered: `true` if it took them. */
+  updateItem(itemId: string, input: NewItemInput): Promise<boolean> {
+    return run("updateItem", { itemId, input })?.saved ?? Promise.resolve(false);
   },
 
   toggleLike(itemId: string) {

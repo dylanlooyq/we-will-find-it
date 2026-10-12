@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Bookmark, Coins, ListChecks, MessageCircle, PartyPopper, Plus } from "lucide-react";
+import { Bookmark, Coins, ListChecks, MessageCircle, PartyPopper, Pencil, Plus } from "lucide-react";
 import { useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
 import { activePublicItems, bountyForItem, bountyOnOffer, claimsForItem, itemsByOwner } from "@/lib/world";
@@ -97,9 +97,14 @@ export function MyPostsView() {
                     }
                     trailing={
                       own && item.status === "active" ? (
-                        <Button size="sm" variant="secondary" onClick={() => setResolving(item)}>
-                          {item.type === "lost" ? "Mark as found" : "Mark as returned"}
-                        </Button>
+                        <span className="flex flex-col items-stretch gap-1.5 sm:flex-row sm:items-center">
+                          <Button size="sm" variant="ghost" href={`/item/${item.slug}/edit`} iconLeft={<Pencil className="size-4" aria-hidden />}>
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => setResolving(item)}>
+                            {item.type === "lost" ? "Mark as found" : "Mark as returned"}
+                          </Button>
+                        </span>
                       ) : tab === "saved" ? (
                         <Button size="sm" variant="ghost" onClick={() => actions.toggleSave(item.id)} aria-label="Remove from saved">
                           <Bookmark className="size-4 fill-coral-500 text-coral-600" aria-hidden />

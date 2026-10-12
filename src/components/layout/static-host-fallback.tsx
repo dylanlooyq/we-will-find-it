@@ -7,6 +7,7 @@ import { LogoMark } from "@/components/brand/logo";
 import { MessagesShellView } from "@/components/chat/messages-shell";
 import { ThreadView } from "@/components/chat/thread-view";
 import { ItemDetail } from "@/components/items/item-detail";
+import { EditPost } from "@/components/post/edit-post";
 import { ProfileView } from "@/components/profile/profile-view";
 import { useHydrated } from "@/lib/store/hooks";
 import { Footer } from "./footer";
@@ -16,14 +17,16 @@ import { MobileTabBar } from "./mobile-tab-bar";
 type Match =
   | { kind: "item"; slug: string }
   | { kind: "claim"; slug: string }
+  | { kind: "edit"; slug: string }
   | { kind: "user"; handle: string }
   | { kind: "thread"; id: string };
 
-/** The routes whose pages come from the database: listings, their claim forms, profiles and conversations. */
+/** The routes whose pages come from the database: listings, their claim and edit forms, profiles and conversations. */
 function matchRoute(pathname: string): Match | null {
   const p = pathname.replace(/\/+$/, "");
   let m: RegExpMatchArray | null;
   if ((m = p.match(/^\/item\/([^/]+)\/claim$/))) return { kind: "claim", slug: decodeURIComponent(m[1]) };
+  if ((m = p.match(/^\/item\/([^/]+)\/edit$/))) return { kind: "edit", slug: decodeURIComponent(m[1]) };
   if ((m = p.match(/^\/item\/([^/]+)$/))) return { kind: "item", slug: decodeURIComponent(m[1]) };
   if ((m = p.match(/^\/user\/([^/]+)$/))) return { kind: "user", handle: decodeURIComponent(m[1]) };
   if ((m = p.match(/^\/messages\/([^/]+)$/))) return { kind: "thread", id: decodeURIComponent(m[1]) };
@@ -78,6 +81,12 @@ export function StaticHostFallback({ notFound }: { notFound: ReactNode }) {
       return (
         <main id="main" className="flex-1">
           <ClaimFlow slug={match.slug} />
+        </main>
+      );
+    case "edit":
+      return (
+        <main id="main" className="flex-1">
+          <EditPost slug={match.slug} />
         </main>
       );
     case "thread":
