@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Ban, EyeOff, Flag, Landmark, Lock, PawPrint, ShieldCheck, UserCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/section";
+import { PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 
 export const metadata: Metadata = {
   title: "Safety & trust",
@@ -14,8 +15,8 @@ export const metadata: Metadata = {
 const TIPS = [
   { icon: Landmark, title: "Meet in a public place", body: "Choose somewhere busy and well-lit — an MRT customer service counter or a mall service desk is ideal. Bring a friend if you can.", tone: "bg-mint-100 text-mint-700" },
   { icon: EyeOff, title: "Keep details private", body: "When you post, hide a unique detail only the real owner would know. Ask claimants to describe it before you share anything.", tone: "bg-found-100 text-found-700" },
-  { icon: Ban, title: "Never pay to get an item back", body: "Real finders never ask for money up front. Bounties are only released after the owner confirms they have their item.", tone: "bg-coral-100 text-coral-700" },
-  { icon: Lock, title: "Protect your personal info", body: "Don't share your NRIC, home address, bank or card details, or one-time passwords. Use in-app chat until you've verified the other person.", tone: "bg-violet-100 text-violet-700" },
+  { icon: Ban, title: "Never pay to get an item back", body: "Real finders never ask for money up front. A bounty is paid directly to the finder, only once the owner has their item back.", tone: "bg-coral-100 text-coral-700" },
+  { icon: Lock, title: "Protect your personal info", body: "Don't share your NRIC, home address, card details, banking logins or one-time passwords. To be paid a bounty, a PayNow number or account number is all anyone needs.", tone: "bg-violet-100 text-violet-700" },
   { icon: UserCheck, title: "Check who you're dealing with", body: "Look at their level, rating, verified tick and finder history. New accounts aren't bad — just take extra care.", tone: "bg-gold-100 text-gold-800" },
   { icon: PawPrint, title: "Pets & microchips", body: "Microchip numbers are never shown publicly. Ask a vet or the AVS to scan a found pet instead of trusting a description alone.", tone: "bg-coral-100 text-coral-700" },
 ];
@@ -79,7 +80,7 @@ export default function SafetyPage() {
             <li><strong className="text-navy-900">Hidden details.</strong> Posters can keep identifying details private until a claimant proves they know them.</li>
             <li><strong className="text-navy-900">Moderation.</strong> Reports are reviewed by people. Fraudulent listings are removed and repeat offenders are suspended.</li>
             <li><strong className="text-navy-900">Block &amp; report.</strong> You can block anyone, report a listing or a user, and flag a suspicious bounty claim.</li>
-            <li><strong className="text-navy-900">Bounty safeguards.</strong> Rewards are released only after the owner confirms receipt — never before.</li>
+            <li><strong className="text-navy-900">No money on the platform.</strong> We never hold, store or move your money. Bounties are paid directly from owner to finder — by {PAYMENT_OPTIONS} — and only after the hand-over.</li>
           </ul>
         </div>
       </Container>

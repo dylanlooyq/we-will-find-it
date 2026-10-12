@@ -79,8 +79,8 @@ You start signed in as **Dylan L.** (Level 5 · Community Hero). The account men
 | --- | --- |
 | **Loser** — post, get matches, chat, reunite | **Post** → *I lost something* → publish → *Potential matches* → open a match → chat → *Item returned* |
 | **Finder** — post a found item, owner contacts you, earn points | **Post** → *I found something* → publish (+10 pts). Open **Messages → Joel T.** → *Item returned* (+30 pts) |
-| **Bounty finder** — claim, proof, owner verifies, release | `/item/iphone-14-pro-orchard` → *Claim S$200 Bounty*. The owner "reviews" after a few seconds; then *I've handed it over* → bounty released, +50 pts, badge unlock |
-| **Bounty owner** — verify claims | `/item/brown-leather-wallet-tampines-mall` (Dylan's own post) → review Cheryl's claim → *Approve* → *Mark as received* |
+| **Bounty finder** — claim, proof, owner verifies, owner pays | `/item/iphone-14-pro-orchard` → *Claim S$200 Bounty*. The owner "reviews" after a few seconds; then *I've handed it over* → the owner marks the bounty paid (PayNow), +50 pts, badge unlock |
+| **Bounty owner** — verify claims, pay the finder | `/item/brown-leather-wallet-tampines-mall` (Dylan's own post) → review Cheryl's claim → *Approve* → *Mark as received* → say how you paid (PayNow / PayLah! / cash / bank transfer) |
 | **Pet owner** — lost pet, reunite | **Post** → *I lost a pet*. Browse `/pets` |
 | **Moderator** | Account menu → *Switch to Wei Ming K.* → `/admin` |
 
@@ -127,7 +127,7 @@ migrations/               database schema for the accounts API
 
 - **One seam for data.** Screens read a `World` (`src/lib/world.ts`) via `useWorld()`; server components read `seedWorld`. A backend replaces `buildWorld`'s inputs and the action functions in `src/lib/store/store.ts` — components don't change.
 - **Matching** sits behind a `MatchingService` interface (`src/lib/matching.ts`).
-- **Payments/bounties** are UI + mock state. Nothing moves money.
+- **Bounties are paid member to member** — PayNow, PayLah!, cash or bank transfer, after the hand-over. The platform never holds, stores or moves money; it only records that the owner marked a bounty paid, and how (`Bounty.paidVia`).
 - **Auth** is real (see [Accounts](#accounts)); `AuthSync` mirrors the signed-in account into the store's session user. No secrets live in the frontend.
 - **Time** uses a fixed demo clock (`src/lib/clock.ts`) so prerendering is deterministic.
 - **Next 16 Cache Components:** avoid `Date.now()`/`Math.random()` in server/prerendered code; wrap `useSearchParams`/`usePathname` readers in `<Suspense>`. Dynamic routes list their known params in `generateStaticParams`.
@@ -136,5 +136,5 @@ migrations/               database schema for the accounts API
 
 - Replace OpenStreetMap's public tile server with a commercial/own tile provider (OSM's server is for light use).
 - Replace the hero illustration and placeholders with real photography where desired.
-- Connect a real backend for listings, messaging, matching and payments (escrow partner for bounties).
+- Connect a real backend for listings, messaging and matching. There is no payments integration to build — bounties stay off-platform.
 - Add rate limiting, image moderation and an audit log for the moderation tools.

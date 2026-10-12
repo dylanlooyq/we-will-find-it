@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Bookmark, Coins, ListChecks, MessageCircle, PartyPopper, Plus } from "lucide-react";
 import { useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
-import { activePublicItems, bountyForItem, claimsForItem, itemsByOwner } from "@/lib/world";
+import { activePublicItems, bountyForItem, bountyOnOffer, claimsForItem, itemsByOwner } from "@/lib/world";
 import type { Item } from "@/lib/types";
 import { ItemRow } from "../items/item-card";
 import { ResolveDialog } from "../items/resolve-flow";
@@ -82,7 +82,7 @@ export function MyPostsView() {
                   <ItemRow
                     item={item}
                     titleAs="h2"
-                    bountyAmount={b && b.status !== "released" ? b.amount : undefined}
+                    bountyAmount={bountyOnOffer(b) ? b.amount : undefined}
                     note={
                       <span className="flex flex-wrap items-center gap-2 text-navy-500">
                         <span className="inline-flex items-center gap-1">

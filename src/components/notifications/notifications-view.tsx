@@ -18,7 +18,7 @@ const GROUP: Record<NotificationType, Tab> = { match: "match", bounty: "bounty",
 const EMPTY: Record<Tab, { title: string; body: string }> = {
   all: { title: "You're all caught up", body: "We'll let you know about matches, bounty claims, comments and kudos." },
   match: { title: "No matches yet", body: "When someone posts something that looks like yours, it shows up here." },
-  bounty: { title: "No bounty activity", body: "Claims, approvals and released rewards appear here." },
+  bounty: { title: "No bounty activity", body: "Claims, approvals and paid rewards appear here." },
   comment: { title: "No comments yet", body: "Comments on your posts show up here." },
   update: { title: "No updates", body: "Returns, kudos and moderation notices appear here." },
 };

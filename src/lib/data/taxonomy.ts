@@ -1,4 +1,4 @@
-import type { Area, AreaId, Category, CategoryId, Location } from "../types";
+import type { Area, AreaId, Category, CategoryId, Location, PaymentMethod } from "../types";
 
 export const categories: Category[] = [
   { id: "electronics", label: "Electronics", icon: "smartphone", tint: ["#dfe8ff", "#c3d3ff"] },
@@ -13,6 +13,19 @@ export const categories: Category[] = [
 ];
 
 export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c])) as Record<CategoryId, Category>;
+
+/** The only ways a reward changes hands — always directly between two members. */
+export const paymentMethods: { id: PaymentMethod; label: string }[] = [
+  { id: "paynow", label: "PayNow" },
+  { id: "paylah", label: "PayLah!" },
+  { id: "cash", label: "Cash" },
+  { id: "bank", label: "Bank transfer" },
+];
+
+export const paymentLabel = (id: PaymentMethod) => paymentMethods.find((m) => m.id === id)?.label ?? id;
+
+/** "PayNow, PayLah!, cash or bank transfer" — for sentences. */
+export const PAYMENT_OPTIONS = "PayNow, PayLah!, cash or bank transfer";
 
 export const areas: Area[] = [
   { id: "orchard", name: "Orchard", region: "Central", lat: 1.3048, lng: 103.832 },

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BadgeCheck, Coins, Gift, HeartHandshake, Megaphone, PackageCheck, SearchCheck, ShieldCheck, Handshake, Wallet } from "lucide-react";
+import { BadgeCheck, Coins, Gift, HandCoins, HeartHandshake, Megaphone, PackageCheck, SearchCheck, ShieldCheck, Handshake } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { categories, getLocation } from "@/lib/data/taxonomy";
+import { categories, getLocation, PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 import { formatMoney } from "@/lib/format";
 import { distanceKm } from "@/lib/geo";
 import { useNow, useWorld } from "@/lib/store/hooks";
@@ -22,7 +22,7 @@ import { EmptyState } from "../ui/states";
 const PROPS = [
   { icon: Gift, title: "Set a reward", body: "Offer a cash bounty when you post a lost item.", tone: "bg-coral-100 text-coral-700" },
   { icon: HeartHandshake, title: "Encourage good Samaritans", body: "Motivate more people to look out for your item.", tone: "bg-violet-100 text-violet-700" },
-  { icon: ShieldCheck, title: "Safe & secure", body: "Reward is only released after you confirm you have it back.", tone: "bg-mint-100 text-mint-700" },
+  { icon: ShieldCheck, title: "Pay on hand-over", body: "You pay the finder directly, only once you have it back.", tone: "bg-mint-100 text-mint-700" },
 ];
 
 const FLOW = [
@@ -31,7 +31,7 @@ const FLOW = [
   { icon: PackageCheck, label: "They submit proof" },
   { icon: BadgeCheck, label: "You verify it's yours" },
   { icon: Handshake, label: "You meet in public & confirm" },
-  { icon: Wallet, label: "Bounty is released" },
+  { icon: HandCoins, label: "You pay the finder directly" },
 ];
 
 function BountyHero({ count, total }: { count: number; total: number }) {
@@ -177,7 +177,7 @@ export function BountiesView() {
       <Container as="section" className="pt-20" >
         <div id="how-bounties-work" className="scroll-mt-32 rounded-sheet bg-white p-6 shadow-soft sm:p-10">
           <p className="eyebrow text-coral-700">How bounties work</p>
-          <h2 className="mt-2 text-2xl font-extrabold text-navy-900 sm:text-3xl">From &ldquo;lost&rdquo; to &ldquo;released&rdquo; in six steps</h2>
+          <h2 className="mt-2 text-2xl font-extrabold text-navy-900 sm:text-3xl">From &ldquo;lost&rdquo; to &ldquo;paid&rdquo; in six steps</h2>
           <ol className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
             {FLOW.map((s, i) => (
               <li key={s.label} className="relative flex items-start gap-3.5 lg:flex-col lg:items-center lg:text-center">
@@ -190,7 +190,7 @@ export function BountiesView() {
             ))}
           </ol>
           <p className="mt-8 rounded-2xl bg-navy-50 p-4 text-sm leading-relaxed text-navy-600">
-            <strong className="text-navy-800">Demo build:</strong> this is a simulation — no real money moves. At launch, rewards will be held by a licensed escrow partner and released only when the owner confirms they have their item back.
+            <strong className="text-navy-800">We never hold your money.</strong> Rewards go straight from the owner to the finder — by {PAYMENT_OPTIONS} — once the item is back with its owner. Nothing is stored on, or paid through, wewillfind.it.
           </p>
         </div>
       </Container>

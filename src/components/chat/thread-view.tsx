@@ -12,7 +12,9 @@ import { useHydrated, useIsTyping, useNow, useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
 import { toast } from "@/lib/store/events";
 import type { Message } from "@/lib/types";
+import { bountyOnOffer } from "@/lib/world";
 import { DAY } from "@/lib/clock";
+import { PayRewardDialog } from "../bounties/pay-reward";
 import { UserLevel } from "../community/level";
 import { ReportDialog } from "../items/item-dialogs";
 import { ItemRow } from "../items/item-card";
@@ -72,6 +74,7 @@ export function ThreadView({ id }: { id: string }) {
   const [details, setDetails] = useState(false);
   const [report, setReport] = useState(false);
   const [confirmReturn, setConfirmReturn] = useState(false);
+  const [pay, setPay] = useState(false);
   const [thanks, setThanks] = useState(false);
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -117,6 +120,7 @@ export function ThreadView({ id }: { id: string }) {
   const blocked = w.blocked.has(other.id);
   const iAmFinder = (item.type === "lost" && !iAmOwner) || (item.type === "found" && iAmOwner);
   const closed = resolved || blocked;
+  const owesBounty = iAmOwner && bountyOnOffer(bounty);
   const loc = getLocation(item.locationId);
   const pet = item.category === "pets";
 
@@ -131,7 +135,8 @@ export function ThreadView({ id }: { id: string }) {
   const quick = (qid: (typeof QUICK)[number]["id"]) => {
     if (closed) return;
     if (qid === "meet") return setArrange(true);
-    if (qid === "returned") return setConfirmReturn(true);
+    // An owner getting a bounty item back pays the finder directly, so ask how.
+    if (qid === "returned") return owesBounty ? setPay(true) : setConfirmReturn(true);
     if (qid === "at") {
       actions.sendMessage(id, { kind: "quick", text: "I'm at the location" });
       actions.sendMessage(id, { kind: "location", locationId: item.locationId });
@@ -209,7 +214,7 @@ export function ThreadView({ id }: { id: string }) {
               {claim.status === "submitted" && (iAmOwner ? "Verify this claim" : "Waiting for the owner to verify")}
               {claim.status === "more_info" && (iAmOwner ? "Waiting for more info" : "More info requested")}
               {claim.status === "approved" && "Claim approved — arrange the return"}
-              {claim.status === "received" && "Bounty released 🎉"}
+              {claim.status === "received" && "Bounty paid 🎉"}
               {claim.status === "rejected" && "Claim declined"}
               {claim.status === "flagged" && "Claim flagged by moderators"}
             </p>
@@ -228,7 +233,7 @@ export function ThreadView({ id }: { id: string }) {
                 </>
               )}
               {iAmOwner && claim.status === "approved" && !resolved && (
-                <Button size="sm" variant="success" iconLeft={<BadgeCheck className="size-4" aria-hidden />} onClick={() => actions.resolveItem(item.id, claim.claimantId)}>
+                <Button size="sm" variant="success" iconLeft={<BadgeCheck className="size-4" aria-hidden />} onClick={() => setPay(true)}>
                   Mark as Received
                 </Button>
               )}
@@ -362,6 +367,7 @@ export function ThreadView({ id }: { id: string }) {
       <ArrangeReturn open={arrange} onClose={() => setArrange(false)} convId={id} item={item} />
       <ReportDialog open={report} onClose={() => setReport(false)} targetType="user" targetId={other.id} subject={other.name} />
       {iAmOwner && item.type === "lost" && <ThankYouDialog open={thanks} onClose={() => setThanks(false)} user={other} itemId={item.id} />}
+      {owesBounty && bounty && <PayRewardDialog open={pay} onClose={() => setPay(false)} bounty={bounty} finder={other} onConfirm={(via) => actions.markReturned(id, via)} />}
 
       <Overlay open={confirmReturn} onClose={() => setConfirmReturn(false)} title="Item returned?" description="Only confirm once the item is back with its owner — this closes the listing and awards points.">
         <div className="mt-5 flex gap-3">
@@ -384,7 +390,7 @@ export function ThreadView({ id }: { id: string }) {
 
       <Overlay open={details} onClose={() => setDetails(false)} title="Item details" variant="sheet">
         <div className="mt-4 space-y-4">
-          <ItemRow item={item} bountyAmount={bounty && bounty.status !== "released" ? bounty.amount : undefined} />
+          <ItemRow item={item} bountyAmount={bountyOnOffer(bounty) ? bounty.amount : undefined} />
           <dl className="divide-y divide-line rounded-2xl bg-navy-50 px-4 text-sm">
             <div className="flex gap-3 py-3">
               <dt className="w-24 shrink-0 font-semibold text-navy-500">Where</dt>

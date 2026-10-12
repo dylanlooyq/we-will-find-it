@@ -3,7 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Camera, Check, Coins, ImagePlus, Info, Lock, ShieldCheck, Star, UploadCloud, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { categories, getLocation } from "@/lib/data/taxonomy";
+import { categories, getLocation, PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 import { formatDate, formatMoney } from "@/lib/format";
 import { fileToDataUrl, MAX_PHOTOS } from "@/lib/images-client";
 import { PET_SPECIES, TIME_BANDS, timeLabelOf, titleOf, type Draft, type StepErrors, type StepId } from "@/lib/post-draft";
@@ -430,7 +430,7 @@ export function BountyStep({ draft, set, errors }: { draft: Draft; set: SetDraft
           How bounties stay safe
         </p>
         <ol className="mt-3 space-y-2.5 text-sm leading-relaxed text-navy-700">
-          {["Someone finds your item and submits proof.", "You verify it — they only get details after you approve.", "You meet in a public place and confirm you have it back.", "Only then is the bounty released to the finder."].map((t, i) => (
+          {["Someone finds your item and submits proof.", "You verify it — they only get details after you approve.", "You meet in a public place and confirm you have it back.", `Only then do you pay the finder directly — ${PAYMENT_OPTIONS}.`].map((t, i) => (
             <li key={t} className="flex gap-3">
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-mint-100 text-xs font-extrabold text-mint-800">{i + 1}</span>
               {t}
@@ -438,7 +438,7 @@ export function BountyStep({ draft, set, errors }: { draft: Draft; set: SetDraft
           ))}
         </ol>
         <p className="mt-4 rounded-xl bg-navy-50 p-3 text-xs leading-relaxed text-navy-600">
-          <strong className="text-navy-800">Demo build:</strong> no real money moves yet. Payments will use a secure escrow partner at launch.
+          <strong className="text-navy-800">Nothing to pay now:</strong> wewillfind.it never holds your money. The bounty is a promise — you pay the finder yourself when you have your item back.
         </p>
       </div>
     </StepShell>

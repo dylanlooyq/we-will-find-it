@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { PartyPopper, Send } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { formatMoney } from "@/lib/format";
 import { useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
-import type { Item, KudosTone, User } from "@/lib/types";
-import { claimsForItem } from "@/lib/world";
+import type { Item, KudosTone, PaymentMethod, User } from "@/lib/types";
+import { bountyForItem, bountyOnOffer, claimsForItem } from "@/lib/world";
+import { PaymentMethodPicker } from "../bounties/pay-reward";
 import { UserAvatar } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Confetti, PointsCounter, SuccessCheck } from "../ui/feedback";
@@ -125,15 +127,21 @@ export function ResolveDialog({ open, onClose, item }: { open: boolean; onClose:
     setDone(false);
     setThanks(false);
     setPick(null);
+    setVia(null);
   };
 
   const helper = pick ? w.userById.get(pick) : undefined;
   const after = me?.points.allTime ?? 0;
   const gained = after - before;
 
+  // A bounty goes straight from the owner to whoever brought the item back.
+  const bounty = bountyForItem(w, item);
+  const owed = lost && !!helper && bountyOnOffer(bounty) ? bounty : undefined;
+  const [via, setVia] = useState<PaymentMethod | null>(null);
+
   const confirm = () => {
     setBefore(me?.points.allTime ?? 0);
-    actions.resolveItem(item.id, pick || undefined);
+    actions.resolveItem(item.id, pick || undefined, (owed && via) || undefined);
     setDone(true);
   };
 
@@ -200,11 +208,20 @@ export function ResolveDialog({ open, onClose, item }: { open: boolean; onClose:
                 </label>
               </div>
             </fieldset>
+            {owed && helper && (
+              <div className="mt-5 rounded-2xl bg-gold-50 p-4 ring-1 ring-gold-200">
+                <p className="text-sm font-extrabold text-navy-900">
+                  How did you pay {helper.name.split(" ")[0]} the {formatMoney(owed.amount)} bounty?
+                </p>
+                <p className="mb-3 mt-1 text-xs leading-relaxed text-navy-600">You pay them directly — wewillfind.it never holds or moves your money.</p>
+                <PaymentMethodPicker value={via} onChange={setVia} label="How did you pay the bounty?" />
+              </div>
+            )}
             <div className="mt-6 flex gap-3">
               <Button variant="secondary" size="lg" className="flex-1" onClick={close}>
                 Not yet
               </Button>
-              <Button variant="success" size="lg" className="flex-[1.3]" onClick={confirm}>
+              <Button variant="success" size="lg" className="flex-[1.3]" disabled={!!owed && !via} onClick={confirm}>
                 {lost ? "Item reunited" : "Mark as returned"}
               </Button>
             </div>

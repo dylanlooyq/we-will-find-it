@@ -68,7 +68,7 @@ export function Footer() {
         <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-sm text-navy-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>© 2026 wewillfind.it · Singapore&rsquo;s Lost &amp; Found Community</p>
           <p>
-            Demo build — bounties and payments are simulated. <Link href="/safety" className="font-semibold text-navy-700 underline underline-offset-4">Read our safety tips</Link>
+            Demo build — we never hold money; bounties are paid directly between members. <Link href="/safety" className="font-semibold text-navy-700 underline underline-offset-4">Read our safety tips</Link>
           </p>
         </div>
       </div>

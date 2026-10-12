@@ -5,7 +5,7 @@ import { getLocation } from "@/lib/data/taxonomy";
 import { distanceKm } from "@/lib/geo";
 import { useNow, useWorld } from "@/lib/store/hooks";
 import type { ItemType } from "@/lib/types";
-import { activePublicItems, bountyForItem, openBounties, sortRecent } from "@/lib/world";
+import { activePublicItems, bountyForItem, bountyOnOffer, openBounties, sortRecent } from "@/lib/world";
 import { BountyCard } from "../items/bounty-card";
 import { ItemCard } from "../items/item-card";
 import { NearChip } from "../items/near-chip";
@@ -42,7 +42,7 @@ export function RecentSection({ type }: { type: ItemType }) {
               const b = bountyForItem(w, item);
               return (
                 <RailItem key={item.id}>
-                  <ItemCard item={item} bountyAmount={b && b.status !== "released" ? b.amount : undefined} priority={i < 2} className="h-full" />
+                  <ItemCard item={item} bountyAmount={bountyOnOffer(b) ? b.amount : undefined} priority={i < 2} className="h-full" />
                 </RailItem>
               );
             })}
@@ -72,7 +72,7 @@ export function NearbyBounties() {
           tone="light"
           eyebrow="Bounties"
           title="Bounties Near You"
-          body="Cash rewards, released only after the owner confirms they have their item back."
+          body="Cash rewards, paid directly by the owner once they have their item back."
           href="/bounties"
           hrefLabel="All bounties"
         />

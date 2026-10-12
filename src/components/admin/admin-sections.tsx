@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Ban, CheckCheck, Coins, Eye, EyeOff, Flag, ShieldAlert, Sparkles, Trash2, UserRoundCheck, UserRoundX } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { getLocation } from "@/lib/data/taxonomy";
+import { getLocation, paymentLabel } from "@/lib/data/taxonomy";
 import { formatMoney } from "@/lib/format";
 import { mockMatchingService } from "@/lib/matching";
 import { useWorld } from "@/lib/store/hooks";
@@ -401,7 +401,7 @@ export function BountiesSection() {
                     Owner: {w.userById.get(item.ownerId)?.name} · {claims.length} claim{claims.length === 1 ? "" : "s"}
                   </p>
                 </div>
-                <Pill tone={b.status === "released" ? "mint" : b.status === "open" ? "gold" : "found"}>{b.status}</Pill>
+                <Pill tone={b.status === "paid" ? "mint" : b.status === "open" ? "gold" : "found"}>{b.status}</Pill>
                 <p className="text-xl font-extrabold tabular-nums text-navy-900">{formatMoney(b.amount)}</p>
               </div>
               {claims.length > 0 && (
@@ -483,7 +483,7 @@ export function ResolvedSection() {
                     {helper ? `Returned via ${helper.name}` : "Resolved"} · <RelativeTime iso={i.resolvedAt ?? i.postedAt} />
                   </p>
                 </div>
-                {b?.status === "released" && <Pill tone="gold">{formatMoney(b.amount)} released</Pill>}
+                {b?.status === "paid" && <Pill tone="gold">{formatMoney(b.amount)} paid{b.paidVia ? ` · ${paymentLabel(b.paidVia)}` : ""}</Pill>}
                 <Pill tone="mint">Reunited</Pill>
               </li>
             );

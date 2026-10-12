@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, BadgeCheck, CircleHelp, Clock, Coins, HandCoins, Lock, MapPin, MessageCircle, PartyPopper, Send, ShieldCheck, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { getLocation } from "@/lib/data/taxonomy";
+import { getLocation, PAYMENT_OPTIONS, paymentLabel } from "@/lib/data/taxonomy";
 import { formatMoney } from "@/lib/format";
 import { useHydrated, useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
@@ -59,7 +59,7 @@ function ClaimShell({ slug, children, title = "Claim bounty", step }: { slug: st
   );
 }
 
-/** "Claim bounty" — three short steps, then a live tracker until the reward is released. */
+/** "Claim bounty" — three short steps, then a live tracker until the owner has paid the reward. */
 export function ClaimFlow({ slug }: { slug: string }) {
   const w = useWorld();
   const hydrated = useHydrated();
@@ -280,7 +280,7 @@ function timeline(claim: Claim, ownerFirst: string): TimelineStep[] {
       state: rejected ? "failed" : verified ? "done" : "current",
     },
     { key: "ret", label: "Arrange the return", body: "Agree a public meeting place and time.", state: s === "received" ? "done" : s === "approved" ? "current" : "todo" },
-    { key: "rel", label: "Bounty released", body: "Sent once the owner confirms they have it back.", state: s === "received" ? "done" : "todo" },
+    { key: "paid", label: "Bounty paid", body: `${ownerFirst} pays you directly once they have it back — ${PAYMENT_OPTIONS}.`, state: s === "received" ? "done" : "todo" },
   ];
 }
 
@@ -318,7 +318,7 @@ export function ClaimStatus({ slug, claimId }: { slug: string; claimId: string }
         </div>
         <div className="shrink-0 rounded-2xl bg-gold-100 px-3.5 py-2 text-center">
           <p className="text-lg font-extrabold tabular-nums text-navy-900">{formatMoney(bounty.amount)}</p>
-          <p className="text-[0.62rem] font-extrabold uppercase tracking-wider text-gold-800">{s === "received" ? "Released" : "Bounty"}</p>
+          <p className="text-[0.62rem] font-extrabold uppercase tracking-wider text-gold-800">{s === "received" ? "Paid" : "Bounty"}</p>
         </div>
       </div>
 
@@ -364,7 +364,7 @@ export function ClaimStatus({ slug, claimId }: { slug: string; claimId: string }
             </div>
             <h1 className="mt-5 text-2xl font-extrabold text-navy-900 sm:text-3xl">Claim approved 🎉</h1>
             <p className="mx-auto mt-2 max-w-md text-navy-600">
-              {first} verified your proof. Now arrange a hand-over in a public place — the {formatMoney(bounty.amount)} bounty is released once they confirm they have it back.
+              {first} verified your proof. Now arrange a hand-over in a public place — {first} pays you the {formatMoney(bounty.amount)} bounty directly once they have it back. Agree in chat how: {PAYMENT_OPTIONS}.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Button size="lg" href={claim.conversationId ? `/messages/${claim.conversationId}?arrange=1` : "/messages"} iconLeft={<MapPin className="size-4" aria-hidden />}>
@@ -381,11 +381,13 @@ export function ClaimStatus({ slug, claimId }: { slug: string; claimId: string }
             <div className="flex justify-center">
               <SuccessCheck tone="gold" size={96} icon={<Coins className="size-10" aria-hidden />} />
             </div>
-            <p className="eyebrow mt-5 text-mint-700">Bounty released</p>
+            <p className="eyebrow mt-5 text-mint-700">Bounty paid</p>
             <h1 className="mt-1 text-3xl font-extrabold text-navy-900">Item returned! 💰</h1>
             <p className="mx-auto mt-2 max-w-md text-navy-600">
-              {first} confirmed they have their item. <strong className="text-navy-900">{formatMoney(bounty.amount)}</strong> is on its way to you, and the community is a little kinder today.
+              {first} confirmed they have their item and paid you <strong className="text-navy-900">{formatMoney(bounty.amount)}</strong> directly
+              {bounty.paidVia && ` (${paymentLabel(bounty.paidVia)})`}. The community is a little kinder today.
             </p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-navy-500">Not received it? Message {first} — rewards go straight from owner to finder, so wewillfind.it can&rsquo;t send or refund them.</p>
             <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-mint-100 px-4 py-2 text-lg font-extrabold text-mint-800">
               <PointsCounter from={0} to={50} prefix="+" suffix=" points" />
             </p>

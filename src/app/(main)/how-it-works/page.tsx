@@ -6,6 +6,7 @@ import { HowItWorks } from "@/components/home/how-it-works";
 import { PostButton } from "@/components/layout/post-chooser";
 import { Button } from "@/components/ui/button";
 import { Container, SectionHeader } from "@/components/ui/section";
+import { PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
 const FAQ = [
   {
     q: "Is wewillfind.it free?",
-    a: "Yes. Posting, browsing, messaging and claiming are free. Bounties are optional — if you choose to offer one, it's only released after you confirm you have your item back.",
+    a: "Yes. Posting, browsing, messaging and claiming are free. Bounties are optional — if you choose to offer one, you pay it directly to the finder once you have your item back. We never hold your money.",
   },
   {
     q: "How do I know a finder really has my item?",
@@ -25,7 +26,7 @@ const FAQ = [
   },
   {
     q: "How do bounties work?",
-    a: "You attach a cash reward when you post a lost item. A finder submits a claim with proof. You verify it, meet in a public place, and confirm receipt — only then is the reward released to the finder. In this demo build no real money moves.",
+    a: `You attach a cash reward when you post a lost item. A finder submits a claim with proof. You verify it, meet in a public place, and confirm receipt — only then do you pay the finder directly, by ${PAYMENT_OPTIONS}. Nothing is paid to, held by or stored on wewillfind.it.`,
   },
   {
     q: "What should I do if I find something valuable?",
@@ -99,7 +100,7 @@ export default function HowItWorksPage() {
           <div className="rounded-sheet bg-gradient-to-br from-gold-100 to-gold-50 p-7 ring-1 ring-gold-200 sm:p-9">
             <Coins className="size-8 text-gold-700" aria-hidden />
             <h2 className="mt-4 text-2xl font-extrabold text-navy-900">Bounties</h2>
-            <p className="mt-2 leading-relaxed text-navy-700">Lost something that matters? Add a cash reward. Finders submit proof, you verify, and the reward is released only after you confirm you have your item back.</p>
+            <p className="mt-2 leading-relaxed text-navy-700">Lost something that matters? Add a cash reward. Finders submit proof, you verify, and you pay the finder directly — only after you have your item back.</p>
             <Button href="/bounties" variant="dark" className="mt-5">
               Browse bounties
             </Button>

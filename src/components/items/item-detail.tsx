@@ -22,7 +22,7 @@ import {
   Tag,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { areaById, getCategory, getLocation } from "@/lib/data/taxonomy";
+import { areaById, getCategory, getLocation, PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 import { formatDate, formatMoney, occurredLabel, timeUntil } from "@/lib/format";
 import { distanceKm, formatDistance } from "@/lib/geo";
 import { useHydrated, useNow, useWorld } from "@/lib/store/hooks";
@@ -287,7 +287,7 @@ function Detail({ item }: { item: Item }) {
                   <p className="mt-1 text-sm font-extrabold uppercase tracking-wider text-gold-800">Bounty</p>
                 </div>
                 <p className="hidden max-w-[16rem] text-sm leading-relaxed text-navy-700 sm:block">
-                  This reward goes to the person who successfully returns the item. {timeUntil(openBounty.expiresAt, now)}.
+                  The owner pays this directly to whoever returns the item — {PAYMENT_OPTIONS}. {timeUntil(openBounty.expiresAt, now)}.
                 </p>
               </section>
             )}
@@ -386,7 +386,7 @@ function Detail({ item }: { item: Item }) {
                 <ul className="mt-1 list-disc space-y-0.5 pl-4 text-mint-800">
                   <li>Never share sensitive personal information.</li>
                   <li>Meet in a public place — an MRT customer service counter is ideal.</li>
-                  <li>Never pay anyone to return an item. Bounties are only released after you confirm.</li>
+                  <li>Never pay anyone to return an item. Bounties are paid directly, only after the hand-over.</li>
                   {openBounty && <li>For high-value items, verify identifying details privately in chat.</li>}
                 </ul>
               </div>

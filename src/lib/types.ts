@@ -205,7 +205,10 @@ export interface Item {
   resolvedWithUserId?: string;
 }
 
-export type BountyStatus = "open" | "claimed" | "approved" | "released" | "expired" | "cancelled";
+export type BountyStatus = "open" | "claimed" | "approved" | "paid" | "expired" | "cancelled";
+
+/** Rewards move directly from owner to finder — the platform never holds money. */
+export type PaymentMethod = "paynow" | "paylah" | "cash" | "bank";
 
 export interface Bounty {
   id: string;
@@ -217,6 +220,8 @@ export interface Bounty {
   expiresAt: ISODate;
   /** The claim that was approved, if any */
   winningClaimId?: string;
+  /** How the owner says they paid the finder */
+  paidVia?: PaymentMethod;
 }
 
 export type ClaimStatus = "submitted" | "more_info" | "approved" | "rejected" | "received" | "flagged";

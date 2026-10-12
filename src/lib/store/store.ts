@@ -1,6 +1,6 @@
 import { DAY, DEMO_NOW } from "../clock";
 import { earnedBadgeIds } from "../badges";
-import { getLocation } from "../data/taxonomy";
+import { getLocation, paymentLabel } from "../data/taxonomy";
 import { slugify, formatMoney } from "../format";
 import { levelFor, POINTS_BY_KIND } from "../levels";
 import { mockMatchingService, otherItemId } from "../matching";
@@ -20,6 +20,7 @@ import type {
   MessageKind,
   ModerationState,
   NotificationType,
+  PaymentMethod,
   PetDetails,
   PointsKind,
   Report,
@@ -59,6 +60,8 @@ function ensureLoaded() {
     if (raw) {
       const parsed = JSON.parse(raw) as Overlay;
       if (parsed?.version === 1) state = { ...EMPTY_OVERLAY, ...parsed };
+      // Sessions saved while the platform "released" held rewards — they are now paid member to member.
+      for (const b of Object.values(state.bounties)) if ((b.status as string) === "released") b.status = "paid";
     }
   } catch {
     /* private mode / corrupt data — start fresh */
@@ -603,8 +606,11 @@ export const actions = {
     });
   },
 
-  /** Mark a listing reunited. `counterpartId` is the other party (finder for lost items, loser for found ones). */
-  resolveItem(itemId: string, counterpartId?: string) {
+  /**
+   * Mark a listing reunited. `counterpartId` is the other party (finder for lost items, loser for found ones).
+   * Any bounty is settled directly between the two of them; `paidVia` records how the owner says they paid it.
+   */
+  resolveItem(itemId: string, counterpartId?: string, paidVia?: PaymentMethod) {
     commit((d, w, ctx) => {
       const item = itemDraft(d, w, itemId);
       if (!item || item.status === "resolved") return;
@@ -615,9 +621,13 @@ export const actions = {
       const loserId = item.type === "lost" ? item.ownerId : counterpartId;
       item.resolvedWithUserId = item.type === "lost" ? finderId : loserId;
 
-      const bounty = item.bountyId ? bountyDraft(d, w, item.bountyId) : undefined;
+      const offered = item.bountyId ? bountyDraft(d, w, item.bountyId) : undefined;
+      // No finder, nobody to pay — the offer simply lapses.
+      const bounty = finderId ? offered : undefined;
+      if (offered && !bounty) offered.status = "cancelled";
       if (bounty) {
-        bounty.status = "released";
+        bounty.status = "paid";
+        bounty.paidVia = paidVia;
         for (const c of w.claims.filter((c) => c.itemId === item.id && c.claimantId === finderId)) {
           const cd = claimDraft(d, w, c.id);
           if (cd) cd.status = "received";
@@ -641,7 +651,7 @@ export const actions = {
           pushNote(d, ctx, {
             userId: f.id,
             type: "update",
-            title: bounty ? `💰 ${formatMoney(bounty.amount)} bounty released` : "🎉 Your item has been marked as returned",
+            title: bounty ? `💰 ${formatMoney(bounty.amount)} bounty paid${paidVia ? ` via ${paymentLabel(paidVia)}` : ""}` : "🎉 Your item has been marked as returned",
             body: `${item.title} found its way home. +${pts} points`,
             href: `/item/${item.slug}`,
             itemId: item.id,
@@ -842,8 +852,8 @@ export const actions = {
     });
   },
 
-  /** "Item returned" quick action from inside a conversation. */
-  markReturned(convId: string) {
+  /** "Item returned" quick action from inside a conversation. `paidVia` is how the owner paid any bounty. */
+  markReturned(convId: string, paidVia?: PaymentMethod) {
     const w = getWorld();
     const me = state.sessionUserId;
     const conv = w.conversationById.get(convId);
@@ -858,9 +868,10 @@ export const actions = {
         if (c) addMessage(d, ctx, c, me, { kind: "quick", text: "Item returned" });
       });
       toast("Waiting for the owner to confirm", { body: "They'll tap “Mark as received” once they have it.", tone: "info" });
-      setTimeout(() => actions.resolveItem(item.id, me), 3500);
+      // The simulated owner confirms, and pays any bounty by PayNow.
+      setTimeout(() => actions.resolveItem(item.id, me, item.bountyId ? "paynow" : undefined), 3500);
     } else {
-      actions.resolveItem(item.id, other);
+      actions.resolveItem(item.id, other, paidVia);
     }
   },
 

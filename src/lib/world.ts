@@ -169,6 +169,11 @@ export function bountyForItem(w: World, item: Item): Bounty | undefined {
   return item.bountyId ? w.bountyById.get(item.bountyId) : undefined;
 }
 
+/** Still on offer — not yet paid to a finder, nor withdrawn. */
+export function bountyOnOffer(b: Bounty | undefined): b is Bounty {
+  return !!b && b.status !== "paid" && b.status !== "cancelled";
+}
+
 export function openBounties(w: World, nowMs: number): { bounty: Bounty; item: Item }[] {
   const out: { bounty: Bounty; item: Item }[] = [];
   for (const b of w.bounties) {
