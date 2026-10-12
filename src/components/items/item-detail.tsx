@@ -7,15 +7,18 @@ import {
   Bookmark,
   CalendarDays,
   ChevronLeft,
+  Clock,
   Coins,
   Eye,
   Flag,
   HandHeart,
   Lock,
+  Map as MapIcon,
   MapPin,
   MessageCircle,
   PartyPopper,
   PawPrint,
+  Pencil,
   Search,
   Share2,
   ShieldCheck,
@@ -23,7 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { areaById, getCategory, getLocation, PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
-import { formatDate, formatMoney, occurredLabel, timeUntil } from "@/lib/format";
+import { formatDate, formatMoney, timeUntil } from "@/lib/format";
 import { distanceKm, formatDistance } from "@/lib/geo";
 import { useHydrated, useNow, useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
@@ -84,19 +87,24 @@ export function ItemDetail({ slug }: { slug: string }) {
   return <Detail item={item} />;
 }
 
-function Row({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+const FACT_TONES = { neutral: "bg-navy-100 text-navy-600", lost: "bg-coral-50 text-coral-600", found: "bg-found-50 text-found-600" };
+
+/** One fact about the listing: an icon tile, a small label, and the value beside it. */
+function Fact({ icon, label, tone = "neutral", children }: { icon: React.ReactNode; label: string; tone?: keyof typeof FACT_TONES; children: React.ReactNode }) {
   return (
-    <div className="py-3.5">
-      <dt className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider text-navy-500">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-navy-100 text-navy-600" aria-hidden>
+    <div className="relative min-h-[4.75rem] py-4 pl-[4.75rem] pr-4 sm:pr-5">
+      <dt className="text-[0.7rem] font-bold uppercase tracking-wider text-navy-500">
+        <span className={cn("absolute left-4 top-4 flex size-11 items-center justify-center rounded-2xl", FACT_TONES[tone])} aria-hidden>
           {icon}
         </span>
         {label}
       </dt>
-      <dd className="mt-1.5 pl-[3.125rem] text-[0.98rem] font-semibold leading-snug text-navy-900">{children}</dd>
+      <dd className="mt-0.5 text-[1.02rem] font-bold leading-snug text-navy-900">{children}</dd>
     </div>
   );
 }
+
+const factNote = "block text-sm font-medium text-navy-600";
 
 function Detail({ item }: { item: Item }) {
   const w = useWorld();
@@ -147,6 +155,9 @@ function Detail({ item }: { item: Item }) {
 
   const hiddenCount = item.details.filter((d) => d.hidden).length;
   const title = pet && item.pet?.name ? `${item.pet.name} — ${item.pet.breed}` : item.title;
+  // Under a "Last seen" label, "Last seen in the morning" would say it twice.
+  const seen = item.timeLabel.replace(/^Last seen\s*(?:—\s*)?/, "");
+  const whenNote = pet && lost && seen ? seen[0].toUpperCase() + seen.slice(1) : item.timeLabel;
 
   /* Primary action area — different for owner / visitor / lost / found */
   const actionsBlock = (
@@ -167,6 +178,9 @@ function Detail({ item }: { item: Item }) {
         <>
           <Button size="lg" full variant="success" onClick={() => setResolve(true)} iconLeft={<PartyPopper className="size-5" aria-hidden />}>
             {lost ? "Mark as resolved" : "Mark as returned"}
+          </Button>
+          <Button size="lg" full variant="secondary" href={`/item/${item.slug}/edit`} iconLeft={<Pencil className="size-5" aria-hidden />}>
+            Edit post
           </Button>
           <Button size="lg" full variant="secondary" href="/messages" iconLeft={<MessageCircle className="size-5" aria-hidden />}>
             View messages
@@ -257,38 +271,61 @@ function Detail({ item }: { item: Item }) {
                   ))}
               </div>
               <h1 className="mt-3 text-[1.9rem] font-extrabold leading-tight text-navy-900 sm:text-4xl">{title}</h1>
-              <dl className="mt-4 divide-y divide-line rounded-2xl bg-white px-4 shadow-soft">
-                <Row icon={<MapPin className="size-4" aria-hidden />} label={lost ? "Lost at" : "Found at"}>
-                  <span>{loc.name}</span>
-                  <span className="ml-2 text-sm font-medium text-navy-500">
-                    {areaById[loc.area].name} · {formatDistance(km)}
-                  </span>
-                  {item.locationNote && <span className="mt-0.5 block text-sm font-medium text-navy-600">{item.locationNote}</span>}
-                  <Link href={`/map?loc=${loc.id}&dist=1`} className="mt-1 inline-block text-sm font-bold text-coral-700 hover:underline">
-                    View on map
-                  </Link>
-                </Row>
-                <Row icon={<CalendarDays className="size-4" aria-hidden />} label={pet && lost ? "Last seen" : lost ? "Lost on" : "Found on"}>
-                  {pet && lost && item.timeLabel.startsWith("Last seen") ? `${item.timeLabel} · ${formatDate(item.occurredAt)}` : occurredLabel(item)}
-                </Row>
-                <Row icon={<Eye className="size-4" aria-hidden />} label="Posted">
-                  <RelativeTime iso={item.postedAt} /> <span className="font-medium text-navy-500">· {item.views.toLocaleString("en-SG")} views</span>
-                </Row>
-              </dl>
+              <div className="mt-5 divide-y divide-line overflow-hidden rounded-card bg-white shadow-soft">
+                <dl>
+                  <Fact icon={<MapPin className="size-5" aria-hidden />} label={lost ? "Lost at" : "Found at"} tone={item.type}>
+                    <span className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
+                      <span className="min-w-0">
+                        {loc.name}
+                        <span className={factNote}>
+                          {areaById[loc.area].name} · {formatDistance(km)}
+                        </span>
+                        {item.locationNote && <span className={factNote}>{item.locationNote}</span>}
+                      </span>
+                      <Link
+                        href={`/map?loc=${loc.id}&dist=1`}
+                        className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-navy-50 px-3.5 py-2 text-sm font-bold text-navy-800 ring-1 ring-line transition-colors hover:bg-navy-100"
+                      >
+                        <MapIcon className="size-4 text-coral-600" aria-hidden />
+                        View on map
+                      </Link>
+                    </span>
+                  </Fact>
+                </dl>
+                <dl className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                  <Fact icon={<CalendarDays className="size-5" aria-hidden />} label={pet && lost ? "Last seen" : lost ? "Lost on" : "Found on"}>
+                    {formatDate(item.occurredAt)}
+                    {whenNote && <span className={factNote}>{whenNote}</span>}
+                  </Fact>
+                  <Fact icon={<Clock className="size-5" aria-hidden />} label="Posted">
+                    <RelativeTime iso={item.postedAt} />
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-navy-600">
+                      <Eye className="size-4 text-navy-400" aria-hidden />
+                      {item.views.toLocaleString("en-SG")} {item.views === 1 ? "view" : "views"}
+                    </span>
+                  </Fact>
+                </dl>
+              </div>
             </header>
 
             {openBounty && (
-              <section aria-label="Bounty" className="flex items-center gap-4 rounded-card bg-gradient-to-r from-gold-100 via-gold-50 to-white p-5 ring-1 ring-gold-200">
-                <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gold-300 text-gold-900 shadow-soft">
-                  <Coins className="size-8" aria-hidden />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-4xl font-extrabold leading-none tabular-nums text-navy-900">{formatMoney(openBounty.amount)}</p>
-                  <p className="mt-1 text-sm font-extrabold uppercase tracking-wider text-gold-800">Bounty</p>
+              <section aria-label="Bounty" className="overflow-hidden rounded-card bg-gradient-to-br from-gold-100 via-gold-50 to-white ring-1 ring-gold-200">
+                <div className="flex items-center gap-4 p-5">
+                  <span className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-300 to-gold-400 text-gold-900 shadow-soft">
+                    <Coins className="size-7" aria-hidden />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-extrabold uppercase tracking-wider text-gold-800">Bounty</p>
+                      <p className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-gold-900 ring-1 ring-gold-200">
+                        <Clock className="size-3.5" aria-hidden />
+                        {timeUntil(openBounty.expiresAt, now)}
+                      </p>
+                    </div>
+                    <p className="mt-0.5 text-4xl font-extrabold leading-none tabular-nums text-navy-900">{formatMoney(openBounty.amount)}</p>
+                  </div>
                 </div>
-                <p className="hidden max-w-[16rem] text-sm leading-relaxed text-navy-700 sm:block">
-                  The owner pays this directly to whoever returns the item — {PAYMENT_OPTIONS}. {timeUntil(openBounty.expiresAt, now)}.
-                </p>
+                <p className="border-t border-gold-200/70 bg-white/50 px-5 py-3 text-sm leading-relaxed text-navy-700">The owner pays this directly to whoever returns the item — {PAYMENT_OPTIONS}.</p>
               </section>
             )}
 
@@ -440,9 +477,14 @@ function Detail({ item }: { item: Item }) {
               Browse more
             </Button>
           ) : isOwner ? (
-            <Button full size="lg" variant="success" onClick={() => setResolve(true)}>
-              {lost ? "Mark as resolved" : "Mark as returned"}
-            </Button>
+            <>
+              <Button full size="lg" variant="success" onClick={() => setResolve(true)} className="min-w-0 flex-1">
+                {lost ? "Mark as resolved" : "Mark as returned"}
+              </Button>
+              <Button size="lg" variant="secondary" href={`/item/${item.slug}/edit`} aria-label="Edit post" className="!px-4">
+                <Pencil className="size-5" aria-hidden />
+              </Button>
+            </>
           ) : lost ? (
             <>
               <Button full size="lg" onClick={gate(() => setContact("found"))} className="min-w-0 flex-1">
