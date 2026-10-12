@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { HeartHandshake, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Logo } from "../brand/logo";
 import { SkylineArt } from "../home/hero-art";
 
-/** Split-screen frame for every sign-in screen: form on the left, a bit of community on the right. */
+/** Split-screen frame for every sign-in screen: form on the left, skyline art on the right. */
 export function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
@@ -26,14 +26,6 @@ export function AuthShell({ title, subtitle, children, footer }: { title: string
       <aside aria-hidden className="relative hidden overflow-hidden lg:block">
         <div className="absolute inset-0">
           <SkylineArt />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-navy-950/70 via-navy-950/10 to-transparent" />
-        <div className="absolute inset-x-10 bottom-10 text-white">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-bold backdrop-blur">
-            <HeartHandshake className="size-4" /> 7,391 items reunited and counting
-          </div>
-          <p className="mt-5 max-w-md text-3xl font-extrabold leading-tight">&ldquo;Posted my lost wallet at lunch. A stranger returned it before dinner.&rdquo;</p>
-          <p className="mt-3 text-white/80">— Cheryl L., Tampines</p>
         </div>
       </aside>
     </div>
