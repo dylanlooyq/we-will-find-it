@@ -191,7 +191,7 @@ export function SignupForm() {
         }}
         className="space-y-4"
       >
-        <TextField label="Full name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} error={errs.name} placeholder="e.g. Dylan Looi" hint="Only your first name and last initial are shown publicly." />
+        <TextField label="Full name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} error={errs.name} placeholder="e.g. John Smith" hint="Only your first name and last initial are shown publicly." />
         <TextField label="Email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errs.email} placeholder="you@example.com" />
         <PasswordField label="Password" value={pw} onChange={setPw} error={errs.pw} autoComplete="new-password" hint="At least 8 characters." />
         <div>
@@ -439,7 +439,7 @@ export function WelcomeSetup() {
           ))}
         </div>
       </div>
-      <TextField label="Display name" value={name} onChange={(e) => setName(e.target.value)} hint="First name and last initial works well — e.g. Dylan L." />
+      <TextField label="Display name" value={name} onChange={(e) => setName(e.target.value)} hint="First name and last initial works well — e.g. John S." />
       <SelectField label="Where do you spend most of your time?" value={area} onChange={(e) => setArea(e.target.value)} hint="Helps us show you nearby listings and your neighbourhood rank.">
         {areas.map((a) => (
           <option key={a.id} value={a.id}>

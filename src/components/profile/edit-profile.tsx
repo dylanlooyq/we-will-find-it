@@ -70,7 +70,7 @@ export function EditProfileDialog({ open, onClose, user }: { open: boolean; onCl
             </div>
           </div>
         </div>
-        <TextField label="Display name" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} hint="First name and last initial works well — e.g. Dylan L." />
+        <TextField label="Display name" value={name} onChange={(e) => setName(e.target.value)} maxLength={30} hint="First name and last initial works well — e.g. John S." />
         <TextField label="Username" value={handle} onChange={(e) => setHandle(e.target.value)} prefix={<span className="text-sm font-bold">@</span>} maxLength={24} />
         <SelectField label="Home area" value={area} onChange={(e) => setArea(e.target.value as typeof area)}>
           {areas.map((a) => (
