@@ -52,9 +52,10 @@ export function Hero() {
         <div className="relative mx-auto w-full max-w-xl lg:max-w-none">
           <div className="relative aspect-[6/5.4] overflow-hidden rounded-[2rem] shadow-pop ring-1 ring-white/70 sm:aspect-[6/5]">
             <SkylineArt />
-            <FloatPin tone="gold" className="left-[53%] top-[24%]" />
-            <FloatPin tone="lost" className="left-[17%] top-[40%]" delay="-1.6s" />
-            <FloatPin tone="found" className="left-[79%] top-[38%]" delay="-3s" />
+            {/* Tips sit on the art: the SkyPark deck, the Flyer's hub, the foot of the tallest Supertree. The art crops differently at each aspect ratio, hence two tops. */}
+            <FloatPin tone="gold" className="left-[52.7%] top-[40.7%] sm:top-[40%]" />
+            <FloatPin tone="lost" className="left-[20.3%] top-[59.6%] sm:top-[60.4%]" delay="-1.6s" />
+            <FloatPin tone="found" className="left-[87.7%] top-[76.7%] sm:top-[78.8%]" delay="-3s" />
           </div>
 
           {/* Floating cards: an illustration of what listings look like, not real posts */}

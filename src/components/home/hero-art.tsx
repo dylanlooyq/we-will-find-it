@@ -132,11 +132,11 @@ export function SkylineArt({ className }: { className?: string }) {
   );
 }
 
-/** Location pin used for floating markers over the art. */
+/** Location pin used for floating markers over the art. `left`/`top` place the tip, not the corner. */
 export function FloatPin({ tone, className, delay = "0s" }: { tone: "lost" | "found" | "gold"; className?: string; delay?: string }) {
   const c = { lost: "#e11d48", found: "#2b4fdb", gold: "#f59e0b" }[tone];
   return (
-    <span aria-hidden className={cn("absolute animate-float", className)} style={{ animationDelay: delay }}>
+    <span aria-hidden className={cn("absolute -translate-x-1/2 -translate-y-full animate-float", className)} style={{ animationDelay: delay }}>
       <span className="absolute left-1/2 top-[88%] block h-2 w-6 -translate-x-1/2 rounded-full bg-navy-900/15 blur-[2px]" />
       <svg viewBox="0 0 40 52" width="40" height="52" className="relative drop-shadow-lg">
         <path d="M20 51 C 8 36 2 28 2 19 a 18 18 0 1 1 36 0 c 0 9 -6 17 -18 32 Z" fill={c} />
