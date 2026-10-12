@@ -77,7 +77,7 @@ You start signed in as **Dylan L.** (Level 5 · Community Hero). The account men
 
 | Journey | Where to start |
 | --- | --- |
-| **Loser** — post, get matches, chat, reunite | **Post** → *I lost something* → publish → *Potential matches* → open a match → chat → *Item returned* |
+| **Poster** — post, get matches, chat, reunite | **Post** → *I lost something* → publish → *Potential matches* → open a match → chat → *Item returned* |
 | **Finder** — post a found item, owner contacts you, earn points | **Post** → *I found something* → publish (+10 pts). Open **Messages → Joel T.** → *Item returned* (+30 pts) |
 | **Bounty finder** — claim, proof, owner verifies, owner pays | `/item/iphone-14-pro-orchard` → *Claim S$200 Bounty*. The owner "reviews" after a few seconds; then *I've handed it over* → the owner marks the bounty paid (PayNow), +50 pts, badge unlock |
 | **Bounty owner** — verify claims, pay the finder | `/item/brown-leather-wallet-tampines-mall` (Dylan's own post) → review Cheryl's claim → *Approve* → *Mark as received* → say how you paid (PayNow / PayLah! / cash / bank transfer) |

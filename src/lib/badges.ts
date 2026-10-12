@@ -12,8 +12,8 @@ export const BADGES: BadgeDef[] = [
   { id: "top-finder-area", name: "Top Finder", description: "Be top 3 in your neighbourhood", group: "Community", glyph: "pin", tone: "coral", goal: 1 },
   { id: "community-hero", name: "Community Hero", description: "Reach Level 5 — 500 points", group: "Community", glyph: "star", tone: "gold", goal: 500 },
   { id: "trusted-member", name: "Trusted Member", description: "Strong ratings from 10+ people", group: "Community", glyph: "shield", tone: "blue", goal: 10 },
-  { id: "verified-user", name: "Verified User", description: "Complete your profile", group: "Loser", glyph: "check", tone: "blue", goal: 1 },
-  { id: "helpful-loser", name: "Helpful Loser", description: "Mark an item as reunited", group: "Loser", glyph: "hand", tone: "green", goal: 1 },
+  { id: "verified-user", name: "Verified User", description: "Complete your profile", group: "Poster", glyph: "check", tone: "blue", goal: 1 },
+  { id: "helpful-poster", name: "Helpful Poster", description: "Mark an item as reunited", group: "Poster", glyph: "hand", tone: "green", goal: 1 },
   { id: "early-supporter", name: "Early Supporter", description: "Joined in 2024", group: "Special", glyph: "star", tone: "navy", goal: 1 },
 ];
 
@@ -64,7 +64,7 @@ export function getBadgeProgress(user: User): BadgeProgress[] {
       case "early-supporter":
         progress = joinedYear <= 2024 ? 1 : 0;
         break;
-      case "helpful-loser":
+      case "helpful-poster":
       case "top-finder-area":
         progress = earned ? 1 : 0;
         break;

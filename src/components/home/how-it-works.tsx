@@ -5,7 +5,7 @@ import { Container, SectionHeader } from "../ui/section";
 
 type Step = { icon: LucideIcon; title: string; body: string };
 
-export const LOSER_STEPS: Step[] = [
+export const POSTER_STEPS: Step[] = [
   { icon: Camera, title: "Post what you lost", body: "Add a photo, where and when. Under a minute." },
   { icon: Users, title: "The community looks out", body: "Thousands of locals see it. Add a bounty to boost it." },
   { icon: BellRing, title: "Get notified", body: "We alert you to matches and messages instantly." },
@@ -58,7 +58,7 @@ export function HowItWorks({ heading = true }: { heading?: boolean }) {
         <SectionHeader eyebrow="How it works" title="Simple for everyone" body="Whether you lost it or found it, we make the hand-back safe and easy." href="/how-it-works" hrefLabel="Learn more" />
       )}
       <div className={cn("grid gap-5 lg:grid-cols-2", heading && "mt-8")}>
-        <Track tone="coral" subtitle="If you lost something" title="Lost it? Here's what happens" steps={LOSER_STEPS} as={heading ? "h3" : "h2"} />
+        <Track tone="coral" subtitle="If you lost something" title="Lost it? Here's what happens" steps={POSTER_STEPS} as={heading ? "h3" : "h2"} />
         <Track tone="found" subtitle="If you found something" title="Found it? Be the hero" steps={FINDER_STEPS} as={heading ? "h3" : "h2"} />
       </div>
     </Container>

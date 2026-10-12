@@ -67,7 +67,7 @@ export const users: User[] = [
     reviews: 38,
     stats: { itemsFound: 48, itemsLost: 6, itemsReturned: 43, bountyReturns: 5, areasHelped: 5, helpedThisMonth: 4, electronicsReturned: 3, responseMinutes: 22 },
     pts: [640, 380, 190],
-    badges: ["helpful-loser", "top-finder-area"],
+    badges: ["helpful-poster", "top-finder-area"],
     areaPoints: { punggol: 56, sengkang: 22, tampines: 14, orchard: 12, bedok: 8 },
   }),
   make({

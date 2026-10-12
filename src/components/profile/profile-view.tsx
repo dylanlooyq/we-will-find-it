@@ -42,7 +42,7 @@ const KIND_ICON: Record<PointsKind, typeof Award> = {
 };
 
 const TONE_EMOJI = { heart: "❤️", thumb: "👍", star: "🌟" } as const;
-const GROUPS = ["All", "Finder", "Loser", "Community", "Special"] as const;
+const GROUPS = ["All", "Finder", "Poster", "Community", "Special"] as const;
 
 export function ProfileView({ handle }: { handle: string }) {
   const w = useWorld();

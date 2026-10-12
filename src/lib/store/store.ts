@@ -607,7 +607,7 @@ export const actions = {
   },
 
   /**
-   * Mark a listing reunited. `counterpartId` is the other party (finder for lost items, loser for found ones).
+   * Mark a listing reunited. `counterpartId` is the other party (finder for lost items, the person who lost it for found ones).
    * Any bounty is settled directly between the two of them; `paidVia` records how the owner says they paid it.
    */
   resolveItem(itemId: string, counterpartId?: string, paidVia?: PaymentMethod) {
@@ -618,8 +618,8 @@ export const actions = {
       item.resolvedAt = ctx.nowIso;
 
       const finderId = item.type === "lost" ? counterpartId : item.ownerId;
-      const loserId = item.type === "lost" ? item.ownerId : counterpartId;
-      item.resolvedWithUserId = item.type === "lost" ? finderId : loserId;
+      const seekerId = item.type === "lost" ? item.ownerId : counterpartId;
+      item.resolvedWithUserId = item.type === "lost" ? finderId : seekerId;
 
       const offered = item.bountyId ? bountyDraft(d, w, item.bountyId) : undefined;
       // No finder, nobody to pay — the offer simply lapses.
@@ -658,9 +658,9 @@ export const actions = {
           });
         }
       }
-      if (loserId) {
-        const l = userDraft(d, w, loserId);
-        if (l && !l.badges.includes("helpful-loser")) l.badges.push("helpful-loser");
+      if (seekerId) {
+        const l = userDraft(d, w, seekerId);
+        if (l && !l.badges.includes("helpful-poster")) l.badges.push("helpful-poster");
       }
 
       const conv = w.conversations.find(

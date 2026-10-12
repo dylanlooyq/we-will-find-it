@@ -343,7 +343,7 @@ export interface BadgeDef {
   id: string;
   name: string;
   description: string;
-  group: "Finder" | "Loser" | "Community" | "Special";
+  group: "Finder" | "Poster" | "Community" | "Special";
   /** Visual identity — colour family + glyph key, rendered by <BadgeIcon> */
   glyph:
     | "heart"
