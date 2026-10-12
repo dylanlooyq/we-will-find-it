@@ -30,7 +30,10 @@ export function createAuth(env: Env, ctx: Pick<ExecutionContext, "waitUntil">) {
       sendOnSignUp: true,
       sendOnSignIn: true,
       autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user, url }) => {
+      sendVerificationEmail: async ({ user, url }, request) => {
+        // The verify-email page asking "confirmed yet?" (a log-in attempt marked as such) is not a
+        // request for another email — it may ask every time the person switches back from their inbox.
+        if (request?.headers.get("X-Confirm-Check")) return;
         // Whoever confirms an email is new here. A link sent without a destination (the re-send on an
         // unverified log-in attempt) would land on the home page, so point it at profile setup too.
         const link = new URL(url);

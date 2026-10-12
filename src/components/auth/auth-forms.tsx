@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Eye, EyeOff, Inbox, MailCheck } from "lucide-react";
-import { authClient, authErrorMessage } from "@/lib/auth-client";
+import { authClient, authErrorMessage, CONFIRM_CHECK_HEADER } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
 import { areas } from "@/lib/data/taxonomy";
 import { useWorld } from "@/lib/store/hooks";
@@ -57,6 +57,14 @@ function Divider({ children }: { children: React.ReactNode }) {
 const welcomeUrl = (next: string) => `/welcome?next=${encodeURIComponent(next)}`;
 
 const verifyUrl = (email: string, next: string) => `/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`;
+
+/**
+ * The account someone has just signed up (or tried to log in) with here, kept in memory only — never
+ * in storage — until its email is confirmed. On a phone the emailed link usually opens in another
+ * browser, the mail app's own, which signs *that* one in; this lets the browser the person started in
+ * finish too (see VerifyEmail).
+ */
+const unconfirmed: { account: { email: string; password: string } | null } = { account: null };
 
 function FormError({ children }: { children?: string }) {
   if (!children) return null;
@@ -124,7 +132,10 @@ export function LoginForm() {
           if (error) {
             setBusy(false);
             // The server has just emailed a fresh confirmation link.
-            if (error.code === "EMAIL_NOT_VERIFIED") return router.push(verifyUrl(email.trim(), next));
+            if (error.code === "EMAIL_NOT_VERIFIED") {
+              unconfirmed.account = { email: email.trim(), password: pw };
+              return router.push(verifyUrl(email.trim(), next));
+            }
             return setFormErr(authErrorMessage(error));
           }
           // Read this member's data before moving on, so the next page opens signed in.
@@ -187,6 +198,7 @@ export function SignupForm() {
             setBusy(false);
             return setFormErr(authErrorMessage(error));
           }
+          unconfirmed.account = { email: email.trim(), password: pw };
           router.push(verifyUrl(email.trim(), next));
         }}
         className="space-y-4"
@@ -314,13 +326,45 @@ export function VerifyEmail() {
   const next = useNext("/");
   const email = sp.get("email");
   const [cool, setCool] = useState(0);
+  const [checking, setChecking] = useState(false);
+  const [notYet, setNotYet] = useState(false);
+  const asking = useRef(false);
   const { data } = authClient.useSession();
   const verified = !!data?.user.emailVerified;
+  const account = unconfirmed.account?.email === email ? unconfirmed.account : null;
 
   // The link in the email signs this browser in. When that happens (often in another tab), move on.
   useEffect(() => {
     if (verified) router.replace(welcomeUrl(next));
   }, [verified, router, next]);
+
+  // …unless it was opened in a different browser, which is the usual case on a phone. Logging in only
+  // works once the email is confirmed, so trying it answers "confirmed yet?" and finishes the job here.
+  const finish = useCallback(async () => {
+    if (!account || asking.current) return false;
+    asking.current = true;
+    const { error } = await authClient.signIn.email(account, { headers: { [CONFIRM_CHECK_HEADER]: "1" } });
+    asking.current = false;
+    if (error) return false;
+    unconfirmed.account = null;
+    // Read this member's data before moving on, so the next page opens signed in.
+    await refreshWorld(true);
+    router.replace(welcomeUrl(next));
+    return true;
+  }, [account, router, next]);
+
+  // Coming back to this page from the mail app is the moment to look.
+  useEffect(() => {
+    const onReturn = () => {
+      if (document.visibilityState === "visible") void finish();
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
+    return () => {
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
+    };
+  }, [finish]);
 
   useEffect(() => {
     if (cool <= 0) return;
@@ -353,9 +397,32 @@ export function VerifyEmail() {
           {cool > 0 ? `Resend in ${cool}s` : "Resend email"}
         </button>
       )}
-      <Button href="/login" size="lg" full variant="secondary" className="mt-6">
-        Back to log in
-      </Button>
+      {account ? (
+        <Button
+          size="lg"
+          full
+          className="mt-6"
+          loading={checking}
+          onClick={async () => {
+            setChecking(true);
+            setNotYet(!(await finish()));
+            setChecking(false);
+          }}
+        >
+          I&rsquo;ve confirmed my email
+        </Button>
+      ) : (
+        // This page was reloaded, so the new account's details are gone from memory: log in the usual way.
+        <Button href={`/login?next=${encodeURIComponent(next)}`} size="lg" full className="mt-6">
+          I&rsquo;ve confirmed — log in
+        </Button>
+      )}
+      {notYet && (
+        <p role="alert" className="mt-3 text-sm font-semibold text-coral-700">
+          We can&rsquo;t see it yet. Open the link in the email, then try again.
+        </p>
+      )}
+      <p className="mx-auto mt-4 max-w-sm text-sm text-navy-500">If the link opens in another app, come back here afterwards — we&rsquo;ll sign you in on this one too.</p>
     </div>
   );
 }

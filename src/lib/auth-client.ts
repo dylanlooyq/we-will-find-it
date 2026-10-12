@@ -6,6 +6,12 @@ import { createAuthClient } from "better-auth/react";
  */
 export const authClient = createAuthClient();
 
+/**
+ * Sent with a log-in attempt that is only asking "is this email confirmed yet?" (the verify-email
+ * page). The Worker (worker/auth.ts) then doesn't answer "not yet" with another confirmation email.
+ */
+export const CONFIRM_CHECK_HEADER = "X-Confirm-Check";
+
 type AuthError = { status?: number; code?: string; message?: string };
 
 /** A sentence for the person at the keyboard. */
