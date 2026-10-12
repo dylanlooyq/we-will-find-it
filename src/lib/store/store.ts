@@ -1,4 +1,5 @@
 import type { Claim, Item, ItemImage, KudosTone, ClaimStatus, ModerationState, PaymentMethod, ReportStatus, ReportTarget } from "../types";
+import { MEMBER_KEY } from "../member-hint";
 import { DEFAULT_NEAR_LOCATION, EMPTY_STATE, buildWorld, type State, type World } from "../world";
 import { emit, toast } from "./events";
 import { ActionError, applyAction, type ActionArgs, type ActionName, type ActionResult, type MessageInput, type NewItemInput, type ProfilePatch } from "./reducer";
@@ -100,6 +101,9 @@ function savePending() {
 
 function saveCopy() {
   try {
+    // First, and on its own: it is what the next visit reads before anything is drawn (see member-hint).
+    if (confirmed.sessionUserId) window.localStorage.setItem(MEMBER_KEY, "1");
+    else window.localStorage.removeItem(MEMBER_KEY);
     window.localStorage.setItem(CACHE_KEY, JSON.stringify({ rev, view: confirmed }));
   } catch {
     /* storage full or unavailable — the copy is only a head start */
@@ -173,6 +177,7 @@ export function forgetWorld() {
   confirmed = { ...EMPTY_STATE, ready: confirmed.ready };
   try {
     window.localStorage.removeItem(CACHE_KEY);
+    window.localStorage.removeItem(MEMBER_KEY);
   } catch {
     /* nothing to forget */
   }

@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowRight, Search } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 /** Fastest path for someone who just lost something: type it, see matches. */
-export function HeroSearch() {
+export function HeroSearch({ className = "max-w-md" }: { className?: string }) {
   const [q, setQ] = useState("");
   const router = useRouter();
   return (
@@ -15,7 +16,7 @@ export function HeroSearch() {
         e.preventDefault();
         router.push(q.trim() ? `/explore?q=${encodeURIComponent(q.trim())}` : "/explore");
       }}
-      className="relative max-w-md"
+      className={cn("relative", className)}
     >
       <label htmlFor="hero-search" className="sr-only">
         Search lost and found listings

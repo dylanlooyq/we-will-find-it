@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { AuthSync } from "@/components/auth/auth-sync";
 import { AppEffects } from "@/components/layout/app-effects";
 import { PostChooser } from "@/components/layout/post-chooser";
+import { MEMBER_HINT_SCRIPT } from "@/lib/member-hint";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -39,7 +40,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-SG" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full`}>
+    <html lang="en-SG" data-scroll-behavior="smooth" className={`${jakarta.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* Marks <html data-member> before first paint, so members never see the visitor's version flash by. */}
+        <script dangerouslySetInnerHTML={{ __html: MEMBER_HINT_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <a
           href="#main"

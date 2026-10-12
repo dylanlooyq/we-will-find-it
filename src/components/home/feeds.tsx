@@ -14,21 +14,22 @@ import { Button } from "../ui/button";
 import { Container, Rail, RailItem, SectionHeader } from "../ui/section";
 import { PostButton } from "../layout/post-chooser";
 
-/** "Recently Lost" / "Recently Found" — big visual cards, newest first. */
-export function RecentSection({ type }: { type: ItemType }) {
+/** "Recently Lost" / "Recently Found" — big visual cards, newest first. `compact` drops the pitch, for members. */
+export function RecentSection({ type, compact }: { type: ItemType; compact?: boolean }) {
   const w = useWorld();
   const items = sortRecent(activePublicItems(w).filter((i) => i.type === type)).slice(0, 4);
   const lost = type === "lost";
   return (
-    <Container as="section" className="pt-14 sm:pt-20">
+    <Container as="section" className={compact ? "pt-10 sm:pt-12" : "pt-14 sm:pt-20"}>
       <SectionHeader
-        eyebrow={lost ? "Help them look" : "Could it be yours?"}
+        eyebrow={compact ? undefined : lost ? "Help them look" : "Could it be yours?"}
         title={lost ? "Recently Lost" : "Recently Found"}
-        body={lost ? "People nearby are looking for these right now. Seen one? Tell them." : "Found by kind strangers across Singapore — waiting to go home."}
+        body={compact ? undefined : lost ? "People nearby are looking for these right now. Seen one? Tell them." : "Found by kind strangers across Singapore — waiting to go home."}
         href={lost ? "/lost" : "/found"}
         hrefLabel={lost ? "See all lost" : "See all found"}
+        className={compact ? "[&_h2]:text-2xl" : undefined}
       />
-      <div className="mt-7">
+      <div className={compact ? "mt-5" : "mt-7"}>
         {items.length === 0 ? (
           <EmptyState
             icon={<Coins className="size-9" aria-hidden />}

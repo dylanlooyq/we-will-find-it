@@ -205,6 +205,13 @@ h1, h2, h3, h4 {
   outline-color: #fff;
 }
 
+/* Members skip the blocks written for visitors, and the other way round. <html data-member> is set
+   before first paint (src/lib/member-hint.ts), so neither version flashes while the page hydrates. */
+html[data-member] [data-landing],
+html:not([data-member]) [data-member-only] {
+  display: none;
+}
+
 /* Utility layer — tiny, shared helpers */
 @utility scrollbar-none {
   scrollbar-width: none;

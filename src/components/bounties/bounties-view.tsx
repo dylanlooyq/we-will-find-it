@@ -34,9 +34,10 @@ const FLOW = [
   { icon: HandCoins, label: "You pay the finder directly" },
 ];
 
+/** The pitch, for visitors. Members get BountyHeader instead (the swap before hydration is CSS: see lib/member-hint). */
 function BountyHero({ count, total }: { count: number; total: number }) {
   return (
-    <section className="relative isolate overflow-hidden bg-gradient-to-br from-gold-50 via-coral-50 to-white">
+    <section data-landing className="relative isolate overflow-hidden bg-gradient-to-br from-gold-50 via-coral-50 to-white">
       <div aria-hidden className="absolute inset-y-0 right-0 -z-10 hidden w-[55%] opacity-60 [mask-image:linear-gradient(to_left,black_30%,transparent)] lg:block">
         <SkylineArt />
       </div>
@@ -81,6 +82,33 @@ function BountyHero({ count, total }: { count: number; total: number }) {
   );
 }
 
+/** A member already knows what a bounty is: a title, the running total, and the two things they might do. */
+function BountyHeader({ count, total }: { count: number; total: number }) {
+  return (
+    <header data-member-only className="bg-gradient-to-b from-gold-50 to-canvas">
+      <Container className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 pb-5 pt-6 sm:pt-8">
+        <div className="flex items-center gap-3.5">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gold-300 text-gold-900 shadow-soft">
+            <Coins className="size-6" aria-hidden />
+          </span>
+          <div>
+            <h1 className="text-2xl font-extrabold leading-tight text-navy-900 sm:text-3xl">Bounties</h1>
+            <p className="mt-0.5 text-sm font-semibold text-navy-600">
+              {count} open · <span className="font-extrabold text-gold-800">{formatMoney(total)}</span> in rewards
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2.5 max-sm:w-full">
+          <PostButton className="max-sm:flex-1">Offer a bounty</PostButton>
+          <Button href="#how-bounties-work" variant="secondary">
+            How it works
+          </Button>
+        </div>
+      </Container>
+    </header>
+  );
+}
+
 function Section({
   title,
   eyebrow,
@@ -119,6 +147,7 @@ export function BountiesView() {
   const w = useWorld();
   const now = useNow();
   const [cat, setCat] = useState<CategoryId | "all">("all");
+  const me = w.currentUser;
   const near = getLocation(w.nearLocationId);
 
   const all = useMemo(
@@ -136,7 +165,9 @@ export function BountiesView() {
 
   return (
     <>
-      <BountyHero count={all.length} total={total} />
+      {/* Until we know who is looking, both are in the page and CSS shows the likely one. */}
+      {(!w.ready || !me) && <BountyHero count={all.length} total={total} />}
+      {(!w.ready || me) && <BountyHeader count={all.length} total={total} />}
 
       <Container className="sticky top-[var(--header-h)] z-30 -mt-px border-b border-line/70 bg-canvas/95 py-3 backdrop-blur">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
