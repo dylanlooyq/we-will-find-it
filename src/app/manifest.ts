@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { withBasePath } from "@/lib/site";
 
-/** Marks this route prerenderable, which a static (GitHub Pages) export requires. */
+/** Marks this route prerenderable, which a static export requires. */
 export function generateStaticParams() {
   return [{}];
 }

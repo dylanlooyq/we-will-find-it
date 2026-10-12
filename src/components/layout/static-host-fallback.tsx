@@ -32,11 +32,11 @@ function matchRoute(pathname: string): Match | null {
 }
 
 /**
- * Static hosts (GitHub Pages) can only serve pages that were generated at build time. Listings, members
+ * Static hosts (Cloudflare Workers assets) can only serve pages that were generated at build time. Listings, members
  * and conversations created in the browser during the demo therefore have no file of their own, and
  * requests for them are answered with `404.html`. This renders the matching screen there instead of a 404.
  *
- * Only active in the static (Pages) build — everywhere else the real route renders and this is a no-op.
+ * Only active in the static build — everywhere else the real route renders and this is a no-op.
  * It deliberately mirrors the layout chrome of the route groups the real pages live in.
  */
 export function StaticHostFallback({ notFound }: { notFound: ReactNode }) {

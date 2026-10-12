@@ -9,8 +9,12 @@
     "lint": "eslint",
     "images": "node scripts/sync-images.mjs",
     "typecheck": "tsc --noEmit",
-    "build:pages": "node scripts/build-pages.mjs",
-    "preview:pages": "node scripts/preview-pages.mjs"
+    "build:dev": "node scripts/build-static.mjs dev",
+    "build:prod": "node scripts/build-static.mjs prod",
+    "preview": "wrangler dev",
+    "deploy:dev": "npm run build:dev && wrangler deploy --env dev",
+    "deploy:prod": "npm run build:prod && wrangler deploy --env prod",
+    "deploy:www": "wrangler deploy --config workers/www-redirect/wrangler.jsonc"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -29,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.149.0"
   }
 }

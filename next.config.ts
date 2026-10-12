@@ -1,39 +1,24 @@
 import type { NextConfig } from "next";
 
 /**
- * GitHub Pages (static export)
- * ----------------------------
- * `STATIC_EXPORT=true` switches the build to a fully static site that GitHub Pages can serve:
+ * Static export (Cloudflare Workers)
+ * ----------------------------------
+ * `STATIC_EXPORT=true` switches the build to a fully static site that a static host can serve:
  *   - `output: "export"`  → writes the site to ./out
- *   - `basePath`          → project sites are served from https://<owner>.github.io/<repo>/
- *   - `trailingSlash`     → emits /route/index.html, which GitHub Pages resolves reliably
+ *   - `basePath`          → only if the site URL has a path (it doesn't on dev./apex wewillfind.it)
+ *   - `trailingSlash`     → emits /route/index.html, which static hosts resolve reliably
  *   - `images.unoptimized`→ there is no image-optimisation server on a static host
  *
  * Without the flag (npm run dev / npm run build / npm start) nothing below applies, so the
- * normal server-rendered workflow is unchanged. See .github/workflows/deploy-pages.yml.
+ * normal server-rendered workflow is unchanged. See scripts/build-static.mjs and wrangler.jsonc.
  */
 const staticExport = process.env.STATIC_EXPORT === "true";
 
-// "owner/repo" — set automatically by GitHub Actions; scripts/build-pages.mjs derives it from
-// the git remote for local builds.
-const [owner = "", repo = ""] = (process.env.GITHUB_REPOSITORY ?? "").split("/");
-const isUserSite = repo.toLowerCase() === `${owner.toLowerCase()}.github.io`;
-
-// Public URL of the site. Set NEXT_PUBLIC_SITE_URL once a custom domain is attached (e.g. https://wewillfind.it);
-// its path (if any) is then the base path, so a domain root means no /<repo>/ prefix.
+// Public URL of the site — scripts/build-static.mjs sets NEXT_PUBLIC_SITE_URL per deployment target.
+// Its path (if any) is the base path of the static build, so a domain root means no prefix.
 const customUrl = process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL) : null;
-const basePath = !staticExport
-  ? ""
-  : customUrl
-    ? customUrl.pathname.replace(/\/+$/, "")
-    : repo && !isUserSite
-      ? `/${repo}`
-      : "";
-const siteUrl = customUrl
-  ? `${customUrl.origin}${basePath}`
-  : staticExport && owner
-    ? `https://${owner.toLowerCase()}.github.io${basePath}`
-    : "https://wewillfind.it";
+const basePath = staticExport && customUrl ? customUrl.pathname.replace(/\/+$/, "") : "";
+const siteUrl = customUrl ? `${customUrl.origin}${basePath}` : "https://wewillfind.it";
 
 const nextConfig: NextConfig = {
   // Cache Components / Partial Prefetching rely on Partial Prerendering, which needs a server and

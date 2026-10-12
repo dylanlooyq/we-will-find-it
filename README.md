@@ -17,20 +17,30 @@ npm run build && npm start   # production
 
 Needs Node 20+. Built with **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript** and **Tailwind CSS v4**. Icons: `lucide-react`. Map: `leaflet` + OpenStreetMap tiles.
 
-## Deploy to GitHub Pages
+## Deploy to Cloudflare
 
-Pushing to `main` runs `.github/workflows/deploy-pages.yml`, which builds a static export and publishes it. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. The site is then served at `https://<owner>.github.io/<repo>/`.
+The site is a static export served by Cloudflare Workers (static assets, no Worker code). There are two environments, each its own Worker (`wrangler.jsonc`):
+
+| Environment | URL | Branch | Worker |
+| --- | --- | --- | --- |
+| **dev** | https://dev.wewillfind.it | `dev` | `wewillfind-it-dev` |
+| **prod** | https://wewillfind.it | `main` | `wewillfind-it-prod` |
+
+Pushing to `dev` or `main` runs `.github/workflows/deploy-cloudflare.yml`, which builds and deploys the matching environment. One-time setup: add the repository secrets `CLOUDFLARE_API_TOKEN` (an API token from the "Edit Cloudflare Workers" template) and `CLOUDFLARE_ACCOUNT_ID` under **Settings → Secrets and variables → Actions**.
 
 ```bash
-npm run build:pages     # static export into ./out, with the /<repo>/ base path (read from the git remote)
-npm run preview:pages   # serve ./out like GitHub Pages does → http://localhost:4173/<repo>/
+npm run deploy:dev      # build for dev.wewillfind.it and deploy it (uses your `wrangler login`)
+npm run deploy:prod     # build for wewillfind.it and deploy it
+npm run build:dev       # just the static export into ./out (or build:prod)
+npm run preview         # serve ./out exactly as Cloudflare does → http://localhost:8787
+npm run deploy:www      # the www.wewillfind.it → wewillfind.it redirect Worker (workers/www-redirect)
 ```
 
-`npm run dev` / `build` / `start` are unaffected — the Pages build is switched on only by `STATIC_EXPORT=true` (set by `build:pages`). Things worth knowing:
+`npm run dev` / `build` / `start` are unaffected — the static build is switched on only by `STATIC_EXPORT=true` (set by `scripts/build-static.mjs`). Things worth knowing:
 
-- Listings, members and chats created during a demo session don't exist as files, so GitHub Pages answers those URLs with `404.html`; `StaticHostFallback` (in `not-found.tsx`) renders the right screen from the browser's saved demo data instead.
-- A `<owner>.github.io` repo drops the `/<repo>/` base path automatically. For a custom domain, set `NEXT_PUBLIC_SITE_URL` (e.g. `https://wewillfind.it`) in the workflow's build step (`env:` on "Build static site") — a URL without a path means no base path.
-- `robots.txt` and `sitemap.xml` only take effect when the site is served from a domain root.
+- The site URL is baked into each build (canonical URLs, sitemap, share cards), so dev and prod are built separately. Always deploy through the npm scripts rather than a bare `wrangler deploy`.
+- The dev site is public but sends `X-Robots-Tag: noindex` on every response, so search engines leave it alone.
+- Listings, members and chats created during a demo session don't exist as files, so Cloudflare answers those URLs with `404.html`; `StaticHostFallback` (in `not-found.tsx`) renders the right screen from the browser's saved demo data instead.
 
 ## Try the journeys
 

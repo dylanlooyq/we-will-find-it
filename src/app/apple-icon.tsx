@@ -4,7 +4,7 @@ import { MARK_PATH } from "@/components/brand/logo";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-/** Marks this route prerenderable, which a static (GitHub Pages) export requires. */
+/** Marks this route prerenderable, which a static export requires. */
 export function generateStaticParams() {
   return [{}];
 }

@@ -38,7 +38,7 @@ function NotFoundContent() {
 }
 
 /**
- * On a static host (GitHub Pages) this file becomes 404.html — the page served for every URL that has
+ * On a static host (Cloudflare Workers assets) this file becomes 404.html — the page served for every URL that has
  * no file of its own, including listings/chats created in the browser. StaticHostFallback renders those
  * screens; for any other URL (and in all non-static builds) it just shows the 404 above.
  */

@@ -1,0 +1,11 @@
+// A separate, tiny Worker so the main site can stay asset-only: it answers www.wewillfind.it
+// and redirects to the apex domain. Deploy with `npm run deploy:www` (rarely needs redeploying).
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "wewillfind-it-www",
+  "main": "index.js",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "www.wewillfind.it", "custom_domain": true }]
+}

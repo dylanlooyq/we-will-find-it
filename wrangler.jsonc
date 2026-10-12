@@ -1,0 +1,31 @@
+// Cloudflare Workers — serves the static export in ./out. No Worker code runs; requests are
+// answered straight from the asset store. Each environment is its own Worker:
+//
+//   dev   →  wewillfind-it-dev   →  https://dev.wewillfind.it   (npm run deploy:dev,  `dev` branch)
+//   prod  →  wewillfind-it-prod  →  https://wewillfind.it       (npm run deploy:prod, `main` branch)
+//
+// The site URL is baked into the build, so always deploy through the npm scripts — they build ./out
+// for the matching target first (see scripts/build-static.mjs, which holds the same two URLs).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wewillfind-it",
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "directory": "./out",
+    // The export writes /route/index.html; "/route" redirects to "/route/".
+    "html_handling": "auto-trailing-slash",
+    // Unknown URLs get 404.html with a 404 status — StaticHostFallback relies on this.
+    "not_found_handling": "404-page"
+  },
+  // Custom domains only: no *.workers.dev copies of the site.
+  "workers_dev": false,
+  "preview_urls": false,
+  "env": {
+    "dev": {
+      "routes": [{ "pattern": "dev.wewillfind.it", "custom_domain": true }]
+    },
+    "prod": {
+      "routes": [{ "pattern": "wewillfind.it", "custom_domain": true }]
+    }
+  }
+}

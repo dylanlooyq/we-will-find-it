@@ -1,8 +1,8 @@
-// Post-processes the static export in ./out so it behaves on GitHub Pages.
-// Runs automatically at the end of `npm run build:pages` (see scripts/build-pages.mjs).
+// Post-processes the static export in ./out so it behaves on a static host (Cloudflare Workers assets).
+// Runs automatically as part of `npm run build:dev` / `build:prod` (see scripts/build-static.mjs).
 //
 // 1. Next emits its generated images (social-share cards and the apple-touch-icon) as
-//    *extensionless* files. GitHub Pages picks Content-Type from the file extension, so those
+//    *extensionless* files. Static hosts pick Content-Type from the file extension, so those
 //    would be served as application/octet-stream and some scrapers/browsers refuse them. We
 //    rename them to <name>.png.
 // 2. Next leaves the base path off the apple-touch-icon URL, and still points at the old
@@ -10,13 +10,13 @@
 //    the inline flight data in each page, and the per-route .txt payloads the client router fetches.
 // 3. On Windows, Next writes its router prefetch files (__next.<segments>.txt) into nested folders
 //    instead of the flat dotted names the browser asks for (it splits on "/" but joins with "\").
-//    Linux (GitHub Actions) is unaffected; this flattens them so a local build matches CI.
+//    Linux (GitHub Actions) is unaffected; this flattens them so a build on Windows matches CI.
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const OUT = process.argv[2] ?? "out";
 if (!existsSync(OUT)) {
-  console.error(`finalize-pages: "${OUT}" does not exist — run the static build first.`);
+  console.error(`finalize-static: "${OUT}" does not exist — run the static build first.`);
   process.exit(1);
 }
 
@@ -61,7 +61,7 @@ for (const dir of nestedDirs) {
   rmSync(dir, { recursive: true, force: true });
 }
 
-// 2) fix references. The manifest link always carries the base path: "/<repo>/manifest.webmanifest" (or "/manifest...")
+// 2) fix references. The manifest link always carries the base path: "<base>/manifest.webmanifest" (or "/manifest...")
 const indexHtml = readFileSync(join(OUT, "index.html"), "utf8");
 const base = indexHtml.match(/<link rel="manifest" href="([^"]*)\/manifest\.webmanifest"/)?.[1] ?? "";
 
@@ -81,5 +81,5 @@ walk(OUT, (path, name) => {
 });
 
 console.log(
-  `finalize-pages: renamed ${renamed} generated image(s) to .png, flattened ${flattened} prefetch file(s), updated ${patched} file(s).`,
+  `finalize-static: renamed ${renamed} generated image(s) to .png, flattened ${flattened} prefetch file(s), updated ${patched} file(s).`,
 );

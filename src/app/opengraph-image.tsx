@@ -5,7 +5,7 @@ export const alt = "wewillfind.it — Singapore's Lost & Found Community";
 export const size = OG_SIZE;
 export const contentType = "image/png";
 
-/** Marks this image as prerenderable, which a static (GitHub Pages) export requires. */
+/** Marks this image as prerenderable, which a static export requires. */
 export function generateStaticParams() {
   return [{}];
 }
