@@ -262,11 +262,14 @@ export function PetStep({ draft, set, errors }: { draft: Draft; set: SetDraft; e
         optional
         value={draft.microchip}
         onChange={(e) => set({ microchip: e.target.value })}
-        placeholder="15-digit number"
+        placeholder={draft.type === "found" ? "Only if a vet has scanned them" : "15-digit number"}
         hint={
           <span className="inline-flex items-start gap-1.5">
             <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            Never shown publicly — only you can see it, so a vet scan can confirm ownership.
+            {/* A finder can't know the number by looking: say where it comes from, and what it is for. */}
+            {draft.type === "found"
+              ? "You'll only have this if a vet or the AVS has scanned the pet — leave it blank otherwise. It's never shown publicly: ask anyone claiming the pet for their number and check it matches."
+              : "Never shown publicly — only you can see it, so a vet scan can confirm ownership."}
           </span>
         }
       />
