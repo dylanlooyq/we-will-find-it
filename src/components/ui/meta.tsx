@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { relTime, relTimeShort } from "@/lib/format";
 import { useNow } from "@/lib/store/hooks";
 
-/** "2 hours ago" that stays correct as the demo clock ticks, and never hydration-mismatches. */
+/** "2 hours ago" that stays correct as time passes, and never hydration-mismatches. */
 export function RelativeTime({ iso, short, className }: { iso: string; short?: boolean; className?: string }) {
   const now = useNow();
   return (

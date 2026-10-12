@@ -1,6 +1,8 @@
 // Bindings and required secrets are generated into worker-configuration.d.ts (`npm run cf-typegen`).
 // These are the optional ones Wrangler can't infer from wrangler.jsonc.
 interface Env {
+  /** The static export (assets.binding) — `wrangler types` leaves it out for named environments. */
+  ASSETS: Fetcher;
   /** Google OAuth client — "Continue with Google" is off until both are set. */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;

@@ -12,9 +12,6 @@ export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 /** Absolute origin + base path used in canonical URLs, the sitemap and share links. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://wewillfind.it").replace(/\/$/, "");
 
-/** True only in the static (Cloudflare) build. */
-export const IS_STATIC_EXPORT = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
-
 /**
  * Prefix a root-relative public path ("/images/a.jpg") with the base path.
  * Needed for plain URLs that Next doesn't rewrite for us (`<img>`, unoptimised `next/image`).

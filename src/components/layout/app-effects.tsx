@@ -7,7 +7,6 @@ import { cn } from "@/lib/cn";
 import { badgeById } from "@/lib/badges";
 import { useWorld } from "@/lib/store/hooks";
 import { onAppEvent, type AppEvent } from "@/lib/store/events";
-import { resumeSimulations } from "@/lib/store/store";
 import type { Level } from "@/lib/types";
 import { BadgeIcon } from "../community/badge-icon";
 import { Button } from "../ui/button";
@@ -61,10 +60,6 @@ export function AppEffects() {
       }
     });
   }, [dismiss]);
-
-  useEffect(() => {
-    resumeSimulations();
-  }, []);
 
   const badge = badgeQueue[0] ? badgeById[badgeQueue[0]] : undefined;
 

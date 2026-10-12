@@ -28,7 +28,7 @@ export function formatNumber(n: number): string {
   return n.toLocaleString("en-SG");
 }
 
-/** Relative time against an explicit `now` (the demo clock). */
+/** Relative time against an explicit `now` (see `useNow`). */
 export function relTime(iso: string, now: number): string {
   const diff = now - Date.parse(iso);
   if (diff < 45_000) return "just now";

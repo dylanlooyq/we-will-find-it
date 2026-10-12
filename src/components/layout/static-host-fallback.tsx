@@ -8,7 +8,6 @@ import { MessagesShellView } from "@/components/chat/messages-shell";
 import { ThreadView } from "@/components/chat/thread-view";
 import { ItemDetail } from "@/components/items/item-detail";
 import { ProfileView } from "@/components/profile/profile-view";
-import { IS_STATIC_EXPORT } from "@/lib/site";
 import { useHydrated } from "@/lib/store/hooks";
 import { Footer } from "./footer";
 import { Header } from "./header";
@@ -20,7 +19,7 @@ type Match =
   | { kind: "user"; handle: string }
   | { kind: "thread"; id: string };
 
-/** The dynamic routes whose params can be created in the browser (new posts, signups, chats). */
+/** The routes whose pages come from the database: listings, their claim forms, profiles and conversations. */
 function matchRoute(pathname: string): Match | null {
   const p = pathname.replace(/\/+$/, "");
   let m: RegExpMatchArray | null;
@@ -32,20 +31,16 @@ function matchRoute(pathname: string): Match | null {
 }
 
 /**
- * Static hosts (Cloudflare Workers assets) can only serve pages that were generated at build time. Listings, members
- * and conversations created in the browser during the demo therefore have no file of their own, and
- * requests for them are answered with `404.html`. This renders the matching screen there instead of a 404.
- *
- * Only active in the static build — everywhere else the real route renders and this is a no-op.
- * It deliberately mirrors the layout chrome of the route groups the real pages live in.
+ * The site is a static export, so only pages known at build time have a file. Listings, members and
+ * conversations live in the database: requests for them are answered with the "not found" page —
+ * this component — which draws the matching screen from the member's data instead.
+ * The Worker (worker/pages.ts) corrects the status and `<head>` for the ones that exist.
  */
 export function StaticHostFallback({ notFound }: { notFound: ReactNode }) {
   const pathname = usePathname();
   const hydrated = useHydrated();
 
-  if (!IS_STATIC_EXPORT) return notFound;
-
-  // First paint (and the prerendered 404.html): a neutral splash, so a valid in-session URL never flashes "404".
+  // First paint (and the prerendered 404.html): a neutral splash, so a real page never flashes "404".
   if (!hydrated) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-canvas" role="status" aria-label="Loading">

@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, ListChecks, LogOut, MessageCircle, RotateCcw, Shield, ShieldCheck, UserRound, Users } from "lucide-react";
+import { Bell, ListChecks, LogOut, MessageCircle, Shield, ShieldCheck, UserRound } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
-import { DEMO_PERSONAS } from "@/lib/data/users";
 import { useWorld } from "@/lib/store/hooks";
-import { actions } from "@/lib/store/store";
+import { toast } from "@/lib/store/events";
+import { forgetWorld, refreshWorld } from "@/lib/store/store";
 import { conversationsFor, notificationsFor, unreadCount } from "@/lib/world";
 import { UserLevel } from "../community/level";
 import { UserAvatar } from "../ui/avatar";
@@ -91,39 +91,15 @@ export function HeaderActions() {
             </MenuLink>
           )}
         </div>
-        {/* Switching persona is a demo feature: a real account stays itself until it logs out. */}
-        <MenuDivider label={me.authId ? undefined : "Demo accounts"} />
-        {DEMO_PERSONAS.filter((id) => !me.authId && id !== me.id).map((id) => {
-          const u = w.userById.get(id);
-          if (!u) return null;
-          return (
-            <MenuButton
-              key={id}
-              onClick={() => {
-                actions.login(id);
-                router.refresh();
-              }}
-              icon={<Users className="size-[1.15rem]" />}
-            >
-              <span className="block leading-tight">
-                Switch to {u.name}
-                <span className="block text-xs font-medium text-navy-500">
-                  {id === "u_priya" ? "Owner of the S$200 iPhone bounty" : id === "u_marcus" ? "East-side top finder" : id === "u_admin" ? "Moderator view" : ""}
-                </span>
-              </span>
-            </MenuButton>
-          );
-        })}
-        <MenuButton onClick={() => actions.resetDemo()} icon={<RotateCcw className="size-[1.15rem]" />}>
-          Reset demo data
-        </MenuButton>
         <MenuDivider />
         <MenuButton
           danger
           icon={<LogOut className="size-[1.15rem]" />}
           onClick={async () => {
-            if (me.authId) await authClient.signOut();
-            actions.logout();
+            await authClient.signOut();
+            forgetWorld();
+            await refreshWorld(true);
+            toast("You've been logged out", { tone: "info" });
             router.push("/");
           }}
         >

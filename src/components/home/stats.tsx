@@ -2,17 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { HeartHandshake, PackageCheck, Users } from "lucide-react";
+import { useWorld } from "@/lib/store/hooks";
+import { publicItems } from "@/lib/world";
 import { PointsCounter } from "../ui/feedback";
 import { Container } from "../ui/section";
 
-const STATS = [
-  { icon: PackageCheck, value: 12482, label: "items posted", tone: "bg-coral-50 text-coral-600" },
-  { icon: HeartHandshake, value: 7391, label: "items reunited", tone: "bg-mint-50 text-mint-700" },
-  { icon: Users, value: 4823, label: "helpful finders", tone: "bg-found-50 text-found-600" },
-];
-
-/** Counts up once when scrolled into view. (Mock figures for now.) */
+/** The community's real numbers. Counts up once when scrolled into view. */
 export function CommunityStats() {
+  const w = useWorld();
+  const posted = publicItems(w);
+  const STATS = [
+    { icon: PackageCheck, value: posted.length, label: "items posted", tone: "bg-coral-50 text-coral-600" },
+    { icon: HeartHandshake, value: posted.filter((i) => i.status === "resolved").length, label: "items reunited", tone: "bg-mint-50 text-mint-700" },
+    { icon: Users, value: w.users.filter((u) => !u.suspended).length, label: "helpful finders", tone: "bg-found-50 text-found-600" },
+  ];
   const ref = useRef<HTMLDivElement>(null);
   const [seen, setSeen] = useState(false);
 
@@ -48,7 +51,7 @@ export function CommunityStats() {
               </span>
               <div>
                 <p className="text-4xl font-extrabold tracking-tight text-navy-900 sm:text-5xl">
-                  {seen ? <PointsCounter to={s.value} duration={1400} /> : <span className="tabular-nums">0</span>}
+                  {seen && w.ready ? <PointsCounter to={s.value} duration={1400} /> : <span className="tabular-nums">0</span>}
                 </p>
                 <p className="mt-1 text-[0.98rem] font-semibold text-navy-600">{s.label}</p>
               </div>

@@ -38,9 +38,9 @@ function NotFoundContent() {
 }
 
 /**
- * On a static host (Cloudflare Workers assets) this file becomes 404.html — the page served for every URL that has
- * no file of its own, including listings/chats created in the browser. StaticHostFallback renders those
- * screens; for any other URL (and in all non-static builds) it just shows the 404 above.
+ * This file becomes 404.html — the page served for every URL that has no file of its own, which
+ * includes every listing, profile and conversation. StaticHostFallback draws those screens; for any
+ * other URL it shows the 404 above.
  */
 export default function NotFound() {
   return <StaticHostFallback notFound={<NotFoundContent />} />;

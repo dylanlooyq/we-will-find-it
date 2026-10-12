@@ -5,21 +5,25 @@
 > When someone loses something, the community helps find it.
 > When someone finds something, the community helps return it.
 
-Accounts are real: sign-up, log-in and sessions go through a small API backed by a database (see [Accounts](#accounts)). Everything else — listings, chats, points — is mock data that works end-to-end in the browser and persists in `localStorage`.
+Everything is real: accounts, listings, photos, conversations, bounty claims, points and moderation live in a database behind a small API (see [The backend](#the-backend)). The site starts empty and fills up with what members post.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
-npm run build && npm start   # production
+cp .dev.vars.example .dev.vars
+npm run db:migrate:local   # once, and again after adding a migration
+npm run dev:api            # the API + a local database and photo bucket → http://localhost:8787
+npm run dev                # the site → http://localhost:3000 (forwards /api to the API)
 ```
+
+Locally, account emails are printed in the `dev:api` terminal instead of being sent, link included.
 
 Needs Node 20+. Built with **Next.js 16** (App Router, Cache Components), **React 19**, **TypeScript** and **Tailwind CSS v4**. Icons: `lucide-react`. Map: `leaflet` + OpenStreetMap tiles.
 
 ## Deploy to Cloudflare
 
-The site is a static export served by Cloudflare Workers; only `/api/*` runs Worker code (`worker/`, see [Accounts](#accounts)). There are two environments, each its own Worker (`wrangler.jsonc`):
+The site is a static export served by Cloudflare Workers; the API and the database-backed pages run Worker code (`worker/`, see [The backend](#the-backend)). There are two environments, each its own Worker (`wrangler.jsonc`):
 
 | Environment | URL | Branch | Worker |
 | --- | --- | --- | --- |
@@ -40,57 +44,50 @@ npm run deploy:www      # the www.wewillfind.it → wewillfind.it redirect Worke
 
 - The site URL is baked into each build (canonical URLs, sitemap, share cards), so dev and prod are built separately. Always deploy through the npm scripts rather than a bare `wrangler deploy`.
 - The dev site is public but sends `X-Robots-Tag: noindex` on every response, so search engines leave it alone.
-- Listings, members and chats created during a demo session don't exist as files, so Cloudflare answers those URLs with `404.html`; `StaticHostFallback` (in `not-found.tsx`) renders the right screen from the browser's saved demo data instead.
+- Deploys don't touch the database. When a change adds a migration, apply it first: `npm run db:migrate:dev` / `db:migrate:prod`.
 
-## Accounts
+## The backend
 
-Sign-up, log-in, email verification and password reset are real. They are handled by [Better Auth](https://better-auth.com) in a small Cloudflare Worker (`worker/`) that answers `/api/auth/*` on the same domain as the site, and stored in a D1 database — one per environment, so dev accounts never mix with prod:
+One Cloudflare Worker per environment (`worker/`) with its own D1 database, R2 photo bucket and secrets, so dev never mixes with prod:
 
 | | dev | prod |
 | --- | --- | --- |
 | Database (D1) | `wewillfind-it-dev` | `wewillfind-it-prod` |
+| Photos (R2) | `wewillfind-it-dev-uploads` | `wewillfind-it-prod-uploads` |
 | Secrets | `wrangler secret put <NAME> --env dev` | `wrangler secret put <NAME> --env prod` |
 
-What is real and what isn't: the account (name, email, password or Google identity, sessions) lives in the database. The profile built on top of it — points, badges, listings, chats — is still demo data in the browser, created the first time an account signs in on that browser (`AuthSync` → `actions.syncAuth`). The demo personas still work when nobody is signed in.
+**What it serves**
+
+| Path | What |
+| --- | --- |
+| `/api/auth/*` | Sign-up, log-in, email verification, password reset, Google sign-in — [Better Auth](https://better-auth.com) (`worker/auth.ts`) |
+| `GET /api/world` | The data the signed-in member (or a visitor) is allowed to see |
+| `POST /api/action` | One change by the signed-in member: post, message, claim, mark returned, moderate… |
+| `POST /api/upload`, `/api/img/*` | Photos |
+| `/item/*`, `/user/*`, `/messages/*` | Pages drawn in the browser; the Worker gives real listings and profiles a 200 and their own title, description and share image |
+
+**How data flows.** Every change a member can make is a pure function in `src/lib/store/reducer.ts` — who may do it, what it validates, what it changes. The API runs it against the database and is the authority; the browser runs the same function on its own copy first, so the screen updates at once, then adopts the API's answer (`src/lib/store/store.ts`). The browser refreshes its copy every 20 seconds, every 4 in conversations.
+
+**What the API guarantees**
+
+- Who you are comes from the session cookie, never from the request. Changes must come from this site's own pages (Origin check).
+- Members only receive what they may see: their own conversations, claims and notifications; never other people's hidden identifying details, microchip numbers or email addresses (`viewFor` in `worker/world.ts`).
+- Writes are all-or-nothing and never lost to a race: each is one database batch that rolls back and retries if another write landed first. A resent action is carried out once.
+- Photos are checked by their contents (JPEG, PNG, WebP), stored under random names, and limited to 2.5 MB.
+
+**Moderators** are the accounts whose verified email is listed in `ADMIN_EMAILS` (`wrangler.jsonc`, per environment). They get the Moderation area (`/admin`), see every listing and report, and can hide listings, suspend members and overrule claims.
 
 **Secrets** (per environment):
 
 - `BETTER_AUTH_SECRET` — signs session cookies. Already set; changing it signs everyone out.
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — switch on "Continue with Google". Create an OAuth client (type *Web application*) in Google Cloud Console with the redirect URI `https://<site>/api/auth/callback/google`, one client per environment.
-- `RESEND_API_KEY` — switches on email sign-up (see Email below).
+- `RESEND_API_KEY` — switches on email sign-up.
 
-**Email.** Verification and password-reset emails are sent through [Resend](https://resend.com) from `noreply@wewillfind.it` (see `worker/email.ts`), which needs `wewillfind.it` verified as a sending domain in the Resend account. Until `RESEND_API_KEY` is set, a deployed site refuses email sign-up with "Email sign-up isn't available yet"; locally, without a key, the email is printed in the `dev:api` terminal instead, link included.
+**Email.** Verification and password-reset emails are sent through [Resend](https://resend.com) from `noreply@wewillfind.it` (see `worker/email.ts`), which needs `wewillfind.it` verified as a sending domain in the Resend account. Until `RESEND_API_KEY` is set, a deployed site refuses email sign-up with "Email sign-up isn't available yet".
 
-**Database changes.** The schema lives in `migrations/`. `npm run db:schema` prints the SQL for anything `worker/auth.ts` needs that the migrations don't create yet (after upgrading better-auth, say). Save it as the next migration and apply it with `npm run db:migrate:dev` / `db:migrate:prod` before deploying the code that needs it — deploys don't run migrations.
+**Database changes.** The schema lives in `migrations/`: `0001` is the accounts tables, `0002` the members' data (one JSON document per profile, listing, conversation and so on). `npm run db:schema` prints the SQL for anything `worker/auth.ts` needs that the migrations don't create yet (after upgrading better-auth, say); save it as the next migration.
 
-**Run it locally.** Copy `.dev.vars.example` to `.dev.vars`, then:
-
-```bash
-npm run db:migrate:local   # once, and again after adding a migration
-npm run dev:api            # the Worker + a local database → http://localhost:8787
-npm run dev                # the site → http://localhost:3000 (forwards /api to the Worker)
-```
-
-## Try the journeys
-
-You start signed in as **Dylan L.** (Level 5 · Community Hero). The account menu (top right) has *Demo accounts* to switch persona, and *Reset demo data*.
-
-| Journey | Where to start |
-| --- | --- |
-| **Poster** — post, get matches, chat, reunite | **Post** → *I lost something* → publish → *Potential matches* → open a match → chat → *Item returned* |
-| **Finder** — post a found item, owner contacts you, earn points | **Post** → *I found something* → publish (+10 pts). Open **Messages → Joel T.** → *Item returned* (+30 pts) |
-| **Bounty finder** — claim, proof, owner verifies, owner pays | `/item/iphone-14-pro-orchard` → *Claim S$200 Bounty*. The owner "reviews" after a few seconds; then *I've handed it over* → the owner marks the bounty paid (PayNow), +50 pts, badge unlock |
-| **Bounty owner** — verify claims, pay the finder | `/item/brown-leather-wallet-tampines-mall` (Dylan's own post) → review Cheryl's claim → *Approve* → *Mark as received* → say how you paid (PayNow / PayLah! / cash / bank transfer) |
-| **Pet owner** — lost pet, reunite | **Post** → *I lost a pet*. Browse `/pets` |
-| **Moderator** | Account menu → *Switch to Wei Ming K.* → `/admin` |
-
-## Replacing placeholder photos
-
-Item images show a labelled placeholder (**"Image of …"**) until a real photo exists.
-
-1. Open **`/dev/images`** — it lists every slot with its exact file name.
-2. Save the photo (JPG/PNG/WebP) as that file name in `public/images/items/`.
-3. Run `npm run images` (also runs automatically before `dev` / `build`). The placeholder is swapped for the photo.
+**Known limits.** The API reads the whole data set into memory and sends each browser everything it may see. That is simple and safe for a launch-sized community (hundreds of listings); beyond that, listings and conversations should move to their own tables with paged queries. There are no email notifications for new messages, no image moderation, and no sitemap of listings yet.
 
 ## Project map
 
@@ -101,11 +98,11 @@ src/
     (main)/               header + footer + mobile tab bar
       page.tsx            home
       (browse)/           explore · lost · found · pets (shared layout keeps filters mounted)
-      map · bounties · leaderboard · user/[handle] · notifications · my-posts
-      how-it-works · safety · dev/images
-    (immersive)/item/[slug]   listing detail (own sticky action bar)
-    (flow)/               posting + bounty-claim flows (no site chrome)
-    (app)/messages/       split-view inbox + thread
+      map · bounties · leaderboard · notifications · my-posts
+      how-it-works · safety
+    (flow)/post/          the posting flow (no site chrome)
+    (app)/messages/       the inbox
+    not-found.tsx         also the shell for listing, claim, profile and conversation pages
     (auth)/               login · signup · forgot-password · reset-password · verify-email · welcome
     (admin)/admin/        moderation: posts · users · reports · bounties · matches · resolved
     icon.svg · apple-icon · opengraph-image · manifest · robots · sitemap
@@ -114,27 +111,27 @@ src/
     items/ post/ bounties/ chat/ community/ leaderboard/ profile/ notifications/ admin/ home/ map/ layout/ brand/
   lib/
     types.ts              the domain model (User, Item, Bounty, Claim, Conversation, Message, …)
-    data/                 realistic Singapore seed data
-    world.ts              seed + local overlay → what screens read
-    store/                client demo store (actions, events, simulated replies)
-    matching.ts           pluggable matching service (mock scorer today)
+    data/taxonomy.ts      categories, areas, MRT stations and other places
+    world.ts              the data a member sees, indexed for screens
+    store/reducer.ts      every action: who may do it and what it changes (shared with the API)
+    store/store.ts        the browser's copy: instant updates, background sync
+    matching.ts           scores lost ↔ found pairs
     auth-client.ts        client for the accounts API
-worker/                   accounts API: Better Auth on a Cloudflare Worker + D1
-migrations/               database schema for the accounts API
+worker/                   the API: accounts, data, photos, page heads
+migrations/               database schema
 ```
 
-## Architecture notes (for the backend swap)
+## Architecture notes
 
-- **One seam for data.** Screens read a `World` (`src/lib/world.ts`) via `useWorld()`; server components read `seedWorld`. A backend replaces `buildWorld`'s inputs and the action functions in `src/lib/store/store.ts` — components don't change.
-- **Matching** sits behind a `MatchingService` interface (`src/lib/matching.ts`).
+- **One seam for data.** Screens read a `World` (`src/lib/world.ts`) via `useWorld()` and change it through `actions` (`src/lib/store/store.ts`). Components never talk to the API directly.
+- **Matching** sits behind a `MatchingService` interface (`src/lib/matching.ts`) and runs on the listings the browser holds.
 - **Bounties are paid member to member** — PayNow, PayLah!, cash or bank transfer, after the hand-over. The platform never holds, stores or moves money; it only records that the owner marked a bounty paid, and how (`Bounty.paidVia`).
-- **Auth** is real (see [Accounts](#accounts)); `AuthSync` mirrors the signed-in account into the store's session user. No secrets live in the frontend.
-- **Time** uses a fixed demo clock (`src/lib/clock.ts`) so prerendering is deterministic.
-- **Next 16 Cache Components:** avoid `Date.now()`/`Math.random()` in server/prerendered code; wrap `useSearchParams`/`usePathname` readers in `<Suspense>`. Dynamic routes list their known params in `generateStaticParams`.
+- **Time.** Pages are prerendered as of a fixed instant (`src/lib/clock.ts`) so the build is deterministic; the browser switches to the real clock after hydration (`useNow()`).
+- **Next 16 Cache Components:** avoid `Date.now()`/`Math.random()` in server/prerendered code; wrap `useSearchParams`/`usePathname` readers in `<Suspense>`.
 
-## Before going live
+## Still to do
 
 - Replace OpenStreetMap's public tile server with a commercial/own tile provider (OSM's server is for light use).
-- Replace the hero illustration and placeholders with real photography where desired.
-- Connect a real backend for listings, messaging and matching. There is no payments integration to build — bounties stay off-platform.
-- Add rate limiting, image moderation and an audit log for the moderation tools.
+- Email members when they get a message or a claim (today they only see it on the site).
+- Image moderation, and an audit log for the moderation tools.
+- A sitemap of listings, generated from the database.

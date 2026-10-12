@@ -137,11 +137,8 @@ export function ClaimFlow({ slug }: { slug: string }) {
     }
     setSending(true);
     const c = actions.submitClaim({ itemId: item.id, message: message.trim() || "Here's my proof — I'd be happy to describe more.", proof });
-    if (!c) {
-      setSending(false);
-      toast("Couldn't submit your claim", { tone: "error" });
-      return;
-    }
+    // If it isn't allowed, the store has already said why.
+    if (!c) return setSending(false);
     toast("Your claim has been submitted", { body: `${first} has been notified.`, tone: "celebrate" });
     setSending(false);
     router.refresh();
@@ -340,7 +337,7 @@ export function ClaimStatus({ slug, claimId }: { slug: string; claimId: string }
               </span>
             </div>
             <h1 className="mt-5 text-2xl font-extrabold text-navy-900 sm:text-3xl">Your claim has been submitted</h1>
-            <p className="mx-auto mt-2 max-w-md text-navy-600">{first} will review your proof and respond. Owners usually reply within a few hours — in this demo, within seconds.</p>
+            <p className="mx-auto mt-2 max-w-md text-navy-600">{first} will review your proof and respond. We&rsquo;ll notify you as soon as they do.</p>
           </>
         )}
         {s === "more_info" && (

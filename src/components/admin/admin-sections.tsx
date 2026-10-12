@@ -432,7 +432,7 @@ export function MatchesAdmin() {
       .sort((a, b) => b.m.score - a.m.score);
   }, [w]);
   return (
-    <Panel title="Matches" subtitle="High-confidence pairs surfaced by the matching service (mock engine).">
+    <Panel title="Matches" subtitle="High-confidence pairs surfaced by the matching service.">
       {rows.length === 0 ? (
         <EmptyState icon={<Sparkles className="size-9" aria-hidden />} title="No strong matches" body="New pairs show up here as listings arrive." />
       ) : (

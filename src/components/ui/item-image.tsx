@@ -1,18 +1,13 @@
 import Image from "next/image";
 import { Camera } from "lucide-react";
-import available from "@/lib/data/available-images.json";
 import { getCategory } from "@/lib/data/taxonomy";
 import { cn } from "@/lib/cn";
-import { withBasePath } from "@/lib/site";
 import type { CategoryId, ItemImage as ItemImageData } from "@/lib/types";
 import { CategoryIcon } from "./category-icon";
 
-const availableFiles = new Set<string>(available);
-
-/** Public URL for an image if a real photo exists for it. */
+/** The photo's URL, if there is a photo: an uploaded one (/api/img/…) or one just picked in this browser. */
 export function resolveImageSrc(image: ItemImageData): string | undefined {
-  if (image.src) return image.src;
-  return availableFiles.has(image.file) ? withBasePath(`/images/items/${image.file}`) : undefined;
+  return image.src;
 }
 
 type Props = {
@@ -23,18 +18,15 @@ type Props = {
   priority?: boolean;
   /** Tiny thumbnails: show only the icon, no caption */
   compact?: boolean;
-  /** Show the expected file name (used on the dev image checklist) */
-  showFile?: boolean;
   /** Leave room on the right of the caption for overlaid controls */
   captionRightSpace?: boolean;
 };
 
 /**
- * Renders a real photo when one exists, otherwise a tinted placeholder that
- * says what the photo should be ("Image of …") and which file to drop in.
+ * Renders the photo when there is one, otherwise a tinted placeholder with the category's icon.
  * The parent controls size via `className` (e.g. "aspect-[4/3]").
  */
-export function ItemImage({ image, category, className, sizes, priority, compact, showFile, captionRightSpace }: Props) {
+export function ItemImage({ image, category, className, sizes, priority, compact, captionRightSpace }: Props) {
   const src = resolveImageSrc(image);
   const cat = getCategory(category);
 
@@ -47,7 +39,7 @@ export function ItemImage({ image, category, className, sizes, priority, compact
           fill
           sizes={sizes ?? "(min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw"}
           priority={priority}
-          unoptimized={src.startsWith("data:")}
+          unoptimized
           className="object-cover"
         />
       </div>
@@ -82,7 +74,6 @@ export function ItemImage({ image, category, className, sizes, priority, compact
           <Camera className="mt-px size-3 shrink-0 text-navy-500" aria-hidden />
           <span className="line-clamp-2 text-[0.68rem] font-semibold leading-snug">
             Image of {image.label}
-            {showFile && <span className="mt-0.5 block font-mono text-[0.62rem] font-medium text-navy-500">{image.file}</span>}
           </span>
         </div>
       )}

@@ -1,9 +1,8 @@
 /**
  * Domain model for wewillfind.it.
  *
- * Everything the UI renders is expressed in these types. Seed data
- * (src/lib/data) implements them today; a backend can return the same
- * shapes tomorrow without touching a single component.
+ * Everything the UI renders is expressed in these types. The API (worker/) stores and returns
+ * exactly these shapes.
  */
 
 export type ISODate = string;
@@ -127,9 +126,9 @@ export interface User {
   areaPoints: Partial<Record<AreaId, number>>;
   role?: "member" | "admin";
   suspended?: boolean;
-  /** Uploaded avatar (data URL), falls back to initials */
+  /** Uploaded avatar (/api/img/…), falls back to initials */
   avatarSrc?: string;
-  /** The real account (accounts API) this profile belongs to. Demo personas don't have one. */
+  /** The account (accounts API) this profile belongs to. Only sent to the member themselves. */
   authId?: string;
 }
 
@@ -147,11 +146,11 @@ export type ModerationState = "ok" | "hidden" | "removed" | "fraud";
 export type PetSpecies = "dog" | "cat" | "other";
 
 export interface ItemImage {
-  /** File name under /public/images (e.g. "iphone-14-pro-orchard-1.jpg") */
+  /** The name the photo was picked with — informational */
   file: string;
-  /** Shown while no photo exists, and used as alt text */
+  /** Used as alt text, and shown when there is no photo */
   label: string;
-  /** Data URL for photos uploaded in-session */
+  /** The uploaded photo (/api/img/…). Briefly a data URL in the browser that just picked it. */
   src?: string;
 }
 

@@ -1,13 +1,3 @@
-import { users as seedUsers, DEFAULT_USER_ID } from "./data/users";
-import { items as seedItems, seedBounties } from "./data/items";
-import {
-  seedClaims,
-  seedConversations,
-  seedKudos,
-  seedNotifications,
-  seedPoints,
-  seedReports,
-} from "./data/social";
 import type {
   AppNotification,
   Bounty,
@@ -21,18 +11,19 @@ import type {
 } from "./types";
 
 /**
- * The "world" is what every screen reads: seed data merged with a small
- * overlay of local changes (new posts, claims, messages, points…).
+ * The "world" is what every screen reads.
  *
- * Server components read the seed world directly (great for SEO and static
- * rendering). Client components read `useWorld()`, which layers the demo
- * session's changes on top. When a backend arrives, `buildWorld` is the one
- * function whose inputs change — components never need to know.
+ * Its data lives in the database and is owned by the API (worker/): the browser holds the slice of it
+ * that the signed-in member may see — a `State` — and `buildWorld` turns that into indexed lookups.
+ * Prerendered pages are built from the empty state, so they carry no member data.
  */
 
-export interface Overlay {
-  version: 1;
+export interface State {
+  /** False until the first copy has arrived from the API (or from this browser's cache). */
+  ready: boolean;
+  /** The signed-in member's profile, if any. */
   sessionUserId: string | null;
+  /** A preference kept in this browser, not on the server. */
   nearLocationId: string;
   items: Record<string, Item>;
   bounties: Record<string, Bounty>;
@@ -43,18 +34,19 @@ export interface Overlay {
   reports: Record<string, Report>;
   points: PointsTransaction[];
   kudos: Kudos[];
+  /** member id → the ids they liked / saved / follow / blocked */
   likes: Record<string, string[]>;
   saves: Record<string, string[]>;
   follows: Record<string, string[]>;
   blocked: Record<string, string[]>;
-  /** Real timestamp at which the demo clock started ticking from DEMO_NOW */
-  clockStart: number | null;
 }
 
-export const EMPTY_OVERLAY: Overlay = {
-  version: 1,
-  sessionUserId: DEFAULT_USER_ID,
-  nearLocationId: "orchard-mrt",
+export const DEFAULT_NEAR_LOCATION = "orchard-mrt";
+
+export const EMPTY_STATE: State = {
+  ready: false,
+  sessionUserId: null,
+  nearLocationId: DEFAULT_NEAR_LOCATION,
   items: {},
   bounties: {},
   claims: {},
@@ -66,12 +58,13 @@ export const EMPTY_OVERLAY: Overlay = {
   kudos: [],
   likes: {},
   saves: {},
-  follows: { u_dylan: ["u_jasmine", "u_marcus"] },
+  follows: {},
   blocked: {},
-  clockStart: null,
 };
 
 export interface World {
+  /** False until the first copy has arrived — "not found" can't be trusted before that. */
+  ready: boolean;
   items: Item[];
   itemById: Map<string, Item>;
   itemBySlug: Map<string, Item>;
@@ -96,30 +89,22 @@ export interface World {
   blocked: Set<string>;
 }
 
-function mergeById<T extends { id: string }>(seed: T[], over: Record<string, T>): T[] {
-  const out = seed.map((s) => over[s.id] ?? s);
-  const seen = new Set(seed.map((s) => s.id));
-  for (const id of Object.keys(over)) if (!seen.has(id)) out.push(over[id]);
-  return out;
-}
+const cache = new WeakMap<State, World>();
 
-const cache = new WeakMap<Overlay, World>();
-
-export function buildWorld(overlay: Overlay): World {
-  const hit = cache.get(overlay);
+export function buildWorld(state: State): World {
+  const hit = cache.get(state);
   if (hit) return hit;
 
-  const items = mergeById(seedItems, overlay.items);
-  const users = mergeById(seedUsers, overlay.users);
-  const bounties = mergeById(seedBounties, overlay.bounties);
-  const claims = mergeById(seedClaims, overlay.claims);
-  const conversations = mergeById(seedConversations, overlay.conversations);
-  const notifications = mergeById(seedNotifications, overlay.notifications);
-  const reports = mergeById(seedReports, overlay.reports);
+  const items = Object.values(state.items);
+  const users = Object.values(state.users);
+  const bounties = Object.values(state.bounties);
+  const claims = Object.values(state.claims);
+  const conversations = Object.values(state.conversations);
   const userById = new Map(users.map((u) => [u.id, u]));
-  const me = overlay.sessionUserId;
+  const me = state.sessionUserId;
 
   const world: World = {
+    ready: state.ready,
     items,
     itemById: new Map(items.map((i) => [i.id, i])),
     itemBySlug: new Map(items.map((i) => [i.slug, i])),
@@ -132,23 +117,20 @@ export function buildWorld(overlay: Overlay): World {
     claimById: new Map(claims.map((c) => [c.id, c])),
     conversations,
     conversationById: new Map(conversations.map((c) => [c.id, c])),
-    notifications,
-    points: [...seedPoints, ...overlay.points],
-    kudos: [...seedKudos, ...overlay.kudos],
-    reports,
+    notifications: Object.values(state.notifications),
+    points: state.points,
+    kudos: state.kudos,
+    reports: Object.values(state.reports),
     currentUser: me ? (userById.get(me) ?? null) : null,
-    nearLocationId: overlay.nearLocationId,
-    likes: new Set(me ? (overlay.likes[me] ?? []) : []),
-    saves: new Set(me ? (overlay.saves[me] ?? []) : []),
-    follows: new Set(me ? (overlay.follows[me] ?? []) : []),
-    blocked: new Set(me ? (overlay.blocked[me] ?? []) : []),
+    nearLocationId: state.nearLocationId,
+    likes: new Set(me ? (state.likes[me] ?? []) : []),
+    saves: new Set(me ? (state.saves[me] ?? []) : []),
+    follows: new Set(me ? (state.follows[me] ?? []) : []),
+    blocked: new Set(me ? (state.blocked[me] ?? []) : []),
   };
-  cache.set(overlay, world);
+  cache.set(state, world);
   return world;
 }
-
-/** The pristine seed world — what server components and static pages see. */
-export const seedWorld: World = buildWorld(EMPTY_OVERLAY);
 
 /* ── Selectors ────────────────────────────────────────────── */
 

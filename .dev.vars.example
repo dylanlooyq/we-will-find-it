@@ -7,6 +7,9 @@ SITE_URL=http://localhost:3000
 # Any long random string is fine locally.
 BETTER_AUTH_SECRET=local-development-only-secret-0123456789
 
+# Optional: accounts with these (verified) email addresses become moderators.
+# ADMIN_EMAILS=you@example.com
+
 # Optional: send real emails through Resend. Without it, emails are printed in this terminal instead.
 # RESEND_API_KEY=
 

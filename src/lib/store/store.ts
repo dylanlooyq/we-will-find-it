@@ -1,108 +1,39 @@
-import { DAY, DEMO_NOW } from "../clock";
-import { earnedBadgeIds } from "../badges";
-import { getLocation, paymentLabel } from "../data/taxonomy";
-import { slugify, formatMoney } from "../format";
-import { levelFor, POINTS_BY_KIND } from "../levels";
-import { mockMatchingService, otherItemId } from "../matching";
-import type {
-  AppNotification,
-  Bounty,
-  CategoryId,
-  Claim,
-  ClaimStatus,
-  Conversation,
-  IdentifyingDetail,
-  Item,
-  ItemImage,
-  ItemType,
-  KudosTone,
-  Message,
-  MessageKind,
-  ModerationState,
-  NotificationType,
-  PaymentMethod,
-  PetDetails,
-  PointsKind,
-  Report,
-  ReportStatus,
-  ReportTarget,
-  User,
-} from "../types";
-import { EMPTY_OVERLAY, buildWorld, type Overlay, type World } from "../world";
-import { emit, toast, type AppEvent } from "./events";
-import { pickReply } from "./reply-bot";
+import type { Claim, Item, ItemImage, KudosTone, ClaimStatus, ModerationState, PaymentMethod, ReportStatus, ReportTarget } from "../types";
+import { DEFAULT_NEAR_LOCATION, EMPTY_STATE, buildWorld, type State, type World } from "../world";
+import { emit, toast } from "./events";
+import { ActionError, applyAction, type ActionArgs, type ActionName, type ActionResult, type MessageInput, type NewItemInput, type ProfilePatch } from "./reducer";
+
+export type { NewItemInput, ProfilePatch } from "./reducer";
 
 /**
- * Demo state store.
+ * The browser's copy of the world.
  *
- * Holds the *overlay* of local changes on top of the seed world and persists
- * it to localStorage. Every mutation goes through `commit()`, which clones
- * the overlay, applies a recipe, then diffs the session user's points,
- * level and badges so celebratory UI fires automatically.
- *
- * Swap this file for API calls when a backend exists — the hook signatures
- * in `hooks.ts` and the action names below are the contract.
+ * The API (worker/) owns the data. This module keeps the slice the signed-in member may see, refreshes
+ * it in the background, and applies the member's own actions to it straight away — the same functions
+ * the server runs (reducer.ts) — so screens never wait on the network. Each action is then sent to the
+ * API; its answer replaces the local copy, and anything it refuses is undone with a message.
  */
 
-const STORAGE_KEY = "wwfi:demo:v1";
+interface Pending {
+  name: ActionName;
+  args: unknown;
+  nonce: string;
+}
 
-let state: Overlay = EMPTY_OVERLAY;
+const CACHE_KEY = "wwfi:world:v1";
+const PENDING_KEY = "wwfi:pending:v1";
+const NEAR_KEY = "wwfi:near";
+
+/** The last copy the API sent, and its revision. */
+let confirmed: State = EMPTY_STATE;
+let rev = -1;
+/** Actions applied here that the API hasn't answered yet, oldest first. */
+let pending: Pending[] = [];
+/** `confirmed` with `pending` applied on top — what screens read. */
+let state: State = EMPTY_STATE;
+
 let loaded = false;
 const listeners = new Set<() => void>();
-
-/* ── Persistence ──────────────────────────────────────────── */
-
-function ensureLoaded() {
-  if (loaded || typeof window === "undefined") return;
-  loaded = true;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Overlay;
-      if (parsed?.version === 1) state = { ...EMPTY_OVERLAY, ...parsed };
-      // Sessions saved while the platform "released" held rewards — they are now paid member to member.
-      for (const b of Object.values(state.bounties)) if ((b.status as string) === "released") b.status = "paid";
-    }
-  } catch {
-    /* private mode / corrupt data — start fresh */
-  }
-  if (state.clockStart == null) state = { ...state, clockStart: Date.now() };
-}
-
-let persistTimer: ReturnType<typeof setTimeout> | undefined;
-let persistPending = false;
-
-function writeState() {
-  persistPending = false;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Quota exceeded (large uploaded photos). Retry without inline images.
-    try {
-      const slim = JSON.parse(JSON.stringify(state), (k, v) => (k === "src" && typeof v === "string" && v.length > 2000 ? undefined : v));
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
-    } catch {
-      /* give up silently — the session still works in memory */
-    }
-  }
-}
-
-function persist() {
-  if (typeof window === "undefined") return;
-  clearTimeout(persistTimer);
-  persistPending = true;
-  persistTimer = setTimeout(writeState, 250);
-}
-
-// A full page load can start inside the debounce window (e.g. on a static host, pages created during the
-// session are served by the 404 fallback), so write any pending change on the way out.
-if (typeof window !== "undefined") {
-  window.addEventListener("pagehide", () => {
-    if (!persistPending) return;
-    clearTimeout(persistTimer);
-    writeState();
-  });
-}
 
 function notify() {
   for (const fn of listeners) fn();
@@ -113,888 +44,399 @@ export function subscribe(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-export function getState(): Overlay {
+export function getState(): State {
   ensureLoaded();
   return state;
 }
 
-export function getServerState(): Overlay {
-  return EMPTY_OVERLAY;
+export function getServerState(): State {
+  return EMPTY_STATE;
 }
 
 export function getWorld(): World {
   return buildWorld(getState());
 }
 
-/** The demo clock: DEMO_NOW plus real time elapsed since the demo started. */
-export function demoNowMs(): number {
-  ensureLoaded();
-  return state.clockStart == null ? DEMO_NOW : DEMO_NOW + (Date.now() - state.clockStart);
-}
+/* ── Local copy ───────────────────────────────────────────── */
 
-/* ── Helpers ──────────────────────────────────────────────── */
-
-const uid = (prefix: string) => `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-
-interface Ctx {
-  nowMs: number;
-  nowIso: string;
-  events: AppEvent[];
-}
-
-type Draft = Overlay;
-
-function userDraft(d: Draft, w: World, id: string): User | undefined {
-  if (!d.users[id]) {
-    const u = w.userById.get(id);
-    if (!u) return undefined;
-    d.users[id] = structuredClone(u);
+function nearLocation(): string {
+  try {
+    return window.localStorage.getItem(NEAR_KEY) || DEFAULT_NEAR_LOCATION;
+  } catch {
+    return DEFAULT_NEAR_LOCATION;
   }
-  return d.users[id];
 }
 
-function itemDraft(d: Draft, w: World, id: string): Item | undefined {
-  if (!d.items[id]) {
-    const it = w.itemById.get(id);
-    if (!it) return undefined;
-    d.items[id] = structuredClone(it);
+/** Start from the copy saved by the last visit, so pages paint with content while the API is asked. */
+function ensureLoaded() {
+  if (loaded || typeof window === "undefined") return;
+  loaded = true;
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(CACHE_KEY) ?? "null") as { rev: number; view: State } | null;
+    if (saved && typeof saved.rev === "number") {
+      rev = saved.rev;
+      confirmed = { ...EMPTY_STATE, ...saved.view, ready: true };
+    }
+    // Actions a page change interrupted before the API answered. They are replayed here and sent again;
+    // the API recognises one it already carried out, so nothing happens twice.
+    const unsent = JSON.parse(window.sessionStorage.getItem(PENDING_KEY) ?? "[]") as Pending[];
+    if (Array.isArray(unsent)) pending = unsent;
+  } catch {
+    /* private mode or an unreadable copy — the API will fill it in */
   }
-  return d.items[id];
+  rebase();
+  if (pending.length) void flush();
 }
 
-function bountyDraft(d: Draft, w: World, id: string): Bounty | undefined {
-  if (!d.bounties[id]) {
-    const b = w.bountyById.get(id);
-    if (!b) return undefined;
-    d.bounties[id] = structuredClone(b);
+/** Opening a listing or a conversation is a full page load, so unanswered actions must outlive the page. */
+function savePending() {
+  try {
+    if (pending.length) window.sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending));
+    else window.sessionStorage.removeItem(PENDING_KEY);
+  } catch {
+    /* too large to keep (photos) or storage unavailable — they are still sent from this page */
   }
-  return d.bounties[id];
 }
 
-function claimDraft(d: Draft, w: World, id: string): Claim | undefined {
-  if (!d.claims[id]) {
-    const c = w.claimById.get(id);
-    if (!c) return undefined;
-    d.claims[id] = structuredClone(c);
+function saveCopy() {
+  try {
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify({ rev, view: confirmed }));
+  } catch {
+    /* storage full or unavailable — the copy is only a head start */
   }
-  return d.claims[id];
 }
 
-function convDraft(d: Draft, w: World, id: string): Conversation | undefined {
-  if (!d.conversations[id]) {
-    const c = w.conversationById.get(id);
-    if (!c) return undefined;
-    d.conversations[id] = structuredClone(c);
+/** Rebuild what screens read: the confirmed copy with every unanswered action replayed on top. */
+function rebase() {
+  let next: State = { ...confirmed, nearLocationId: nearLocation() };
+  for (const p of pending) {
+    try {
+      next = applyAction(next, p.name, p.args as never, { nowMs: Date.now(), nonce: p.nonce, strict: false }).state;
+    } catch {
+      /* no longer applies to the newer copy — the API's answer will settle it */
+    }
   }
-  return d.conversations[id];
-}
-
-function reportDraft(d: Draft, w: World, id: string): Report | undefined {
-  if (!d.reports[id]) {
-    const r = w.reports.find((x) => x.id === id);
-    if (!r) return undefined;
-    d.reports[id] = structuredClone(r);
-  }
-  return d.reports[id];
-}
-
-function pushNote(
-  d: Draft,
-  ctx: Ctx,
-  n: { userId: string; type: NotificationType; title: string; body?: string; href: string; itemId?: string },
-) {
-  const id = uid("ntf");
-  const note: AppNotification = { id, at: ctx.nowIso, read: false, ...n };
-  d.notifications[id] = note;
-}
-
-function addMessage(
-  d: Draft,
-  ctx: Ctx,
-  conv: Conversation,
-  senderId: string,
-  m: { kind: MessageKind; text?: string; photo?: ItemImage; locationId?: string },
-  atMs = ctx.nowMs,
-) {
-  const msg: Message = { id: uid("msg"), conversationId: conv.id, senderId, at: new Date(atMs).toISOString(), ...m };
-  conv.messages.push(msg);
-  if (senderId === d.sessionUserId) conv.readAt[senderId] = msg.at;
-  return msg;
-}
-
-function findConversation(w: World, itemId: string, a: string, b: string): Conversation | undefined {
-  return w.conversations.find((c) => c.itemId === itemId && c.participantIds.includes(a) && c.participantIds.includes(b));
-}
-
-function ensureConversation(d: Draft, w: World, itemId: string, a: string, b: string): Conversation {
-  const existing = findConversation(w, itemId, a, b);
-  if (existing) return convDraft(d, w, existing.id)!;
-  const conv: Conversation = { id: uid("conv"), itemId, participantIds: [b, a], messages: [], readAt: {} };
-  d.conversations[conv.id] = conv;
-  return conv;
-}
-
-function uniqueSlug(w: World, base: string): string {
-  let slug = base || "listing";
-  let n = 2;
-  while (w.itemBySlug.has(slug)) slug = `${base}-${n++}`;
-  return slug;
-}
-
-function awardPoints(d: Draft, w: World, ctx: Ctx, userId: string, kind: PointsKind, label: string, itemId?: string) {
-  const u = userDraft(d, w, userId);
-  if (!u) return 0;
-  const pts = POINTS_BY_KIND[kind];
-  u.points.allTime += pts;
-  u.points.season += pts;
-  u.points.month += pts;
-  d.points.push({ id: uid("pt"), userId, kind, points: pts, label, at: ctx.nowIso, itemId });
-  if (userId === d.sessionUserId) ctx.events.push({ type: "points", points: pts, label, total: u.points.allTime });
-  return pts;
-}
-
-function rewardSnapshot(w: World, userId: string | null) {
-  const u = userId ? w.userById.get(userId) : undefined;
-  if (!u) return null;
-  return { badges: new Set(earnedBadgeIds(u)), level: levelFor(u.points.allTime).level };
-}
-
-/** Apply a recipe to a cloned overlay, commit it, then fire reward events. */
-function commit(recipe: (d: Draft, w: World, ctx: Ctx) => void) {
-  const w = getWorld();
-  const before = rewardSnapshot(w, state.sessionUserId);
-  const d: Draft = structuredClone(state);
-  const nowMs = demoNowMs();
-  const ctx: Ctx = { nowMs, nowIso: new Date(nowMs).toISOString(), events: [] };
-  recipe(d, w, ctx);
-  state = d;
-  persist();
+  state = next;
   notify();
+}
 
-  const after = rewardSnapshot(getWorld(), state.sessionUserId);
-  if (before && after) {
-    for (const id of after.badges) if (!before.badges.has(id)) ctx.events.push({ type: "badge", badgeId: id });
-    if (after.level > before.level) ctx.events.push({ type: "level", level: levelFor(getWorld().currentUser?.points.allTime ?? 0) });
+function adopt(next: { rev: number; view?: Omit<State, "ready" | "nearLocationId"> }) {
+  rev = next.rev;
+  if (next.view) confirmed = { ...EMPTY_STATE, ...next.view, ready: true };
+  saveCopy();
+  rebase();
+}
+
+/* ── Talking to the API ───────────────────────────────────── */
+
+let refreshing: Promise<void> | null = null;
+
+async function fetchWorld(full: boolean) {
+  try {
+    // "I hold revision N, as member M" — the API then only sends a copy if either has changed.
+    const have = !full && rev >= 0 ? `?have=${rev}&as=${confirmed.sessionUserId ?? ""}` : "";
+    const res = await fetch(`/api/world${have}`, { credentials: "same-origin" });
+    if (!res.ok) throw new Error(`world ${res.status}`);
+    const body = (await res.json()) as { rev: number; view?: State };
+    // An answer that raced with one of our own actions is older than what that action will return.
+    if (!pending.length || full) adopt(body);
+  } catch {
+    // Unreachable API: show what we have (nothing, on a first visit) rather than a spinner forever.
+    if (!confirmed.ready) {
+      confirmed = { ...confirmed, ready: true };
+      rebase();
+    }
   }
-  for (const e of ctx.events) emit(e);
 }
 
-/* ── Timers (simulated counterparties) ────────────────────── */
-
-const replyTimers = new Map<string, ReturnType<typeof setTimeout>>();
-const typingListeners = new Set<() => void>();
-const NO_TYPING: ReadonlySet<string> = new Set<string>();
-let typing: ReadonlySet<string> = NO_TYPING;
-
-function setTyping(convId: string, on: boolean) {
-  const next = new Set(typing);
-  if (on) next.add(convId);
-  else next.delete(convId);
-  typing = next;
-  for (const fn of typingListeners) fn();
+/**
+ * Ask the API for the current copy. `full` re-reads everything even if nothing changed — needed when
+ * the signed-in member changes, since each member sees a different slice.
+ */
+export function refreshWorld(full = false): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  ensureLoaded();
+  if (refreshing && !full) return refreshing;
+  const job = fetchWorld(full).finally(() => {
+    if (refreshing === job) refreshing = null;
+  });
+  refreshing = job;
+  return job;
 }
-export const typingStore = {
-  subscribe(fn: () => void) {
-    typingListeners.add(fn);
-    return () => typingListeners.delete(fn);
-  },
-  get: () => typing,
-  getServer: (): ReadonlySet<string> => NO_TYPING,
-};
 
-function scheduleReply(convId: string) {
-  clearTimeout(replyTimers.get(convId));
-  const w = getWorld();
-  const conv = w.conversationById.get(convId);
-  const me = state.sessionUserId;
-  if (!conv || !me) return;
-  const otherId = conv.participantIds.find((p) => p !== me);
-  const item = w.itemById.get(conv.itemId);
-  if (!otherId || !item || item.status === "resolved") return;
+/** Forget this browser's copy — on log-out, so the next person on this device starts clean. */
+export function forgetWorld() {
+  pending = [];
+  savePending();
+  rev = -1;
+  confirmed = { ...EMPTY_STATE, ready: confirmed.ready };
+  try {
+    window.localStorage.removeItem(CACHE_KEY);
+  } catch {
+    /* nothing to forget */
+  }
+  rebase();
+}
 
-  const startTyping = setTimeout(() => setTyping(convId, true), 700);
-  const t = setTimeout(
-    () => {
-      clearTimeout(startTyping);
-      const w2 = getWorld();
-      const c2 = w2.conversationById.get(convId);
-      const last = c2?.messages[c2.messages.length - 1];
-      setTyping(convId, false);
-      if (!c2 || !last || last.senderId !== me) return;
-      const reply = pickReply(c2, last, item.type === "lost");
-      if (!reply) return;
-      commit((d, w3, ctx) => {
-        const conv3 = convDraft(d, w3, convId);
-        if (conv3) addMessage(d, ctx, conv3, otherId, { kind: "text", text: reply });
-      });
-    },
-    2000 + (convId.length % 5) * 250,
-  );
-  replyTimers.set(convId, t);
+let syncing = false;
+
+/** Keep the copy fresh while the tab is in view. Conversations refresh faster than the rest. */
+export function startSync() {
+  if (syncing || typeof window === "undefined") return;
+  syncing = true;
+  void refreshWorld();
+  let last = Date.now();
+  setInterval(() => {
+    if (document.visibilityState !== "visible" || pending.length) return;
+    const every = window.location.pathname.startsWith("/messages") ? 4_000 : 20_000;
+    if (Date.now() - last < every) return;
+    last = Date.now();
+    void refreshWorld();
+  }, 2_000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void refreshWorld();
+  });
+}
+
+const uploaded = new Map<string, Promise<string>>();
+
+/** Photos are picked as inline data; the API stores only uploaded ones. */
+function upload(dataUrl: string): Promise<string> {
+  let job = uploaded.get(dataUrl);
+  if (!job) {
+    job = (async () => {
+      const blob = await (await fetch(dataUrl)).blob();
+      const res = await fetch("/api/upload", { method: "POST", credentials: "same-origin", headers: { "Content-Type": blob.type }, body: blob });
+      const body = (await res.json().catch(() => ({}))) as { src?: string; message?: string };
+      if (!res.ok || !body.src) throw new ActionError("invalid", body.message ?? "That photo couldn't be uploaded.");
+      return body.src;
+    })();
+    uploaded.set(dataUrl, job);
+    job.catch(() => uploaded.delete(dataUrl));
+  }
+  return job;
+}
+
+async function withUploads(value: unknown): Promise<unknown> {
+  if (typeof value === "string") return value.startsWith("data:image/") ? upload(value) : value;
+  if (Array.isArray(value)) return Promise.all(value.map(withUploads));
+  if (value && typeof value === "object") {
+    const entries = await Promise.all(Object.entries(value).map(async ([k, v]) => [k, await withUploads(v)] as const));
+    return Object.fromEntries(entries);
+  }
+  return value;
+}
+
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function send(p: Pending): Promise<void> {
+  const body = JSON.stringify({ name: p.name, args: await withUploads(p.args), nonce: p.nonce });
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    try {
+      // keepalive lets a request that is already on its way finish even if the page is left (browsers cap its size).
+      res = await fetch("/api/action", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body, keepalive: body.length < 60_000 });
+    } catch (err) {
+      // Offline or a dropped connection: the action may not have arrived, so it is safe to repeat.
+      if (attempt >= 3) throw err;
+      await wait(800 * 2 ** attempt);
+      continue;
+    }
+    // 503: the API was too busy to take it. Nothing was saved, so it is safe to repeat.
+    if (res.status === 503 && attempt < 3) {
+      await wait(800 * 2 ** attempt);
+      continue;
+    }
+    const answer = (await res.json().catch(() => ({}))) as { rev?: number; view?: State; code?: ActionError["code"]; message?: string };
+    if (!res.ok || typeof answer.rev !== "number") throw new ActionError(answer.code ?? "invalid", answer.message ?? "That didn't go through. Please try again.");
+    pending = pending.filter((x) => x !== p);
+    savePending();
+    adopt({ rev: answer.rev, view: answer.view });
+    return;
+  }
+}
+
+let flushing = false;
+
+/** Send unanswered actions one at a time, in the order they were made. */
+async function flush() {
+  if (flushing) return;
+  flushing = true;
+  try {
+    while (pending.length) {
+      const p = pending[0];
+      try {
+        await send(p);
+      } catch (err) {
+        // Refused or undeliverable: undo it here, and whatever was built on top of it.
+        pending = pending.filter((x) => x !== p);
+        savePending();
+        rebase();
+        toast(err instanceof ActionError ? err.message : "We couldn't save that. Check your connection and try again.", { tone: "error" });
+        if (!(err instanceof ActionError)) void refreshWorld(true);
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+}
+
+const nonce = () => Array.from(crypto.getRandomValues(new Uint8Array(10)), (b) => (b % 36).toString(36)).join("");
+
+/**
+ * Do something as the signed-in member: apply it here now, send it to the API in the background.
+ * Returns the action's result, or `null` (after telling the member why) if it isn't allowed.
+ */
+function run<N extends ActionName>(name: N, args: ActionArgs<N>): { result: ActionResult<N> } | null {
+  ensureLoaded();
+  const p: Pending = { name, args, nonce: nonce() };
+  try {
+    const applied = applyAction(state, name, args, { nowMs: Date.now(), nonce: p.nonce, strict: false });
+    pending.push(p);
+    savePending();
+    state = applied.state;
+    notify();
+    for (const e of applied.events) emit(e);
+    void flush();
+    return { result: applied.result };
+  } catch (err) {
+    if (!(err instanceof ActionError)) throw err;
+    toast(err.message, err.code === "unauthorized" ? { tone: "info", href: "/login" } : { tone: "error" });
+    return null;
+  }
 }
 
 /* ── Public actions ───────────────────────────────────────── */
 
-export interface NewItemInput {
-  type: ItemType;
-  title: string;
-  description: string;
-  category: CategoryId;
-  images: ItemImage[];
-  locationId: string;
-  locationNote?: string;
-  occurredAt: string;
-  timeLabel: string;
-  details: IdentifyingDetail[];
-  pet?: PetDetails;
-  bountyAmount?: number;
-}
-
-/** The signed-in account, as the accounts API (worker/auth.ts) reports it. */
-export interface AuthAccount {
-  id: string;
-  name: string;
-  emailVerified: boolean;
-}
-
-export interface ProfilePatch {
-  name?: string;
-  handle?: string;
-  homeArea?: User["homeArea"];
-  bio?: string;
-  hue?: number;
-  avatarSrc?: string;
-}
-
 export const actions = {
-  /* Session */
-  login(userId: string) {
-    const w = getWorld();
-    const u = w.userById.get(userId);
-    if (!u) return;
-    commit((d) => {
-      d.sessionUserId = userId;
-    });
-    toast(`Welcome back, ${u.name.split(" ")[0]}`, { tone: "info" });
-  },
-
-  logout() {
-    commit((d) => {
-      d.sessionUserId = null;
-    });
-    toast("You've been logged out", { tone: "info" });
-  },
-
-  /**
-   * Make the signed-in account the session user, creating its profile the first time it is seen in
-   * this browser. `null` means nobody is really signed in: a profile that belongs to an account is
-   * signed out, while a demo persona is left alone.
-   */
-  syncAuth(account: AuthAccount | null) {
-    const w = getWorld();
-    const current = w.currentUser;
-    if (!account) {
-      if (current?.authId) {
-        commit((d) => {
-          d.sessionUserId = null;
-        });
-      }
-      return;
-    }
-    if (current?.authId === account.id && current.verified === account.emailVerified) return;
-    const existing = w.users.find((u) => u.authId === account.id);
-    commit((d, w, ctx) => {
-      if (existing) {
-        const me = userDraft(d, w, existing.id);
-        if (me) me.verified = account.emailVerified;
-        d.sessionUserId = existing.id;
-        return;
-      }
-      const { name } = account;
-      const first = slugify(name.split(" ")[0]) || "member";
-      let handle = first;
-      let n = 2;
-      while (w.userByHandle.has(handle) || Object.values(d.users).some((u) => u.handle === handle)) handle = `${first}${n++}`;
-      const parts = name.trim().split(/\s+/);
-      const display = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.` : parts[0] || "Member";
-      const newId = `u_${handle}`;
-      let hue = 0;
-      for (const ch of name) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
-      d.users[newId] = {
-        id: newId,
-        authId: account.id,
-        handle,
-        name: display,
-        hue,
-        bio: "",
-        homeArea: "city",
-        memberSince: ctx.nowIso,
-        verified: account.emailVerified,
-        profileComplete: false,
-        rating: 0,
-        reviews: 0,
-        stats: { itemsFound: 0, itemsLost: 0, itemsReturned: 0, bountyReturns: 0, areasHelped: 0, helpedThisMonth: 0, electronicsReturned: 0, responseMinutes: 999 },
-        points: { allTime: 0, season: 0, month: 0 },
-        badges: [],
-        areaPoints: {},
-        role: "member",
-      };
-      d.sessionUserId = newId;
-    });
-  },
-
   updateProfile(patch: ProfilePatch) {
-    commit((d, w, ctx) => {
-      const me = d.sessionUserId && userDraft(d, w, d.sessionUserId);
-      if (!me) return;
-      if (patch.name) me.name = patch.name;
-      if (patch.handle) me.handle = slugify(patch.handle) || me.handle;
-      if (patch.homeArea) me.homeArea = patch.homeArea;
-      if (patch.bio !== undefined) me.bio = patch.bio;
-      if (patch.hue !== undefined) me.hue = patch.hue;
-      if (patch.avatarSrc) me.avatarSrc = patch.avatarSrc;
-      if (!me.profileComplete && me.name && me.bio) {
-        me.profileComplete = true;
-        awardPoints(d, w, ctx, me.id, "profile_complete", "Completed your profile");
-      }
-    });
+    run("updateProfile", patch);
   },
 
+  /** A preference of this browser — it isn't sent to the API. */
   setNearLocation(locationId: string) {
-    commit((d) => {
-      d.nearLocationId = locationId;
-    });
+    try {
+      window.localStorage.setItem(NEAR_KEY, locationId);
+    } catch {
+      /* it still applies for this visit */
+    }
+    state = { ...state, nearLocationId: locationId };
+    notify();
   },
 
   /* Listings */
   createItem(input: NewItemInput): Item | null {
-    let created: Item | null = null;
-    commit((d, w, ctx) => {
-      const me = d.sessionUserId && userDraft(d, w, d.sessionUserId);
-      if (!me) return;
-      const slug = uniqueSlug(w, slugify(`${input.title} ${getLocation(input.locationId).name}`));
-      const id = `itm_${slug.replace(/-/g, "_")}`;
-      let bountyId: string | undefined;
-      if (input.bountyAmount && input.bountyAmount > 0) {
-        bountyId = `bty_${slug.replace(/-/g, "_")}`;
-        d.bounties[bountyId] = {
-          id: bountyId,
-          itemId: id,
-          amount: Math.round(input.bountyAmount),
-          currency: "SGD",
-          status: "open",
-          createdAt: ctx.nowIso,
-          expiresAt: new Date(ctx.nowMs + 30 * DAY).toISOString(),
-        };
-      }
-      const item: Item = {
-        id,
-        slug,
-        type: input.type,
-        status: "active",
-        moderation: "ok",
-        title: input.title.trim(),
-        description: input.description.trim(),
-        category: input.category,
-        images: input.images,
-        locationId: input.locationId,
-        locationNote: input.locationNote?.trim() || undefined,
-        occurredAt: input.occurredAt,
-        timeLabel: input.timeLabel,
-        postedAt: ctx.nowIso,
-        ownerId: me.id,
-        bountyId,
-        details: input.details,
-        pet: input.pet,
-        likes: 0,
-        comments: 0,
-        views: 0,
-      };
-      d.items[id] = item;
-      created = item;
-
-      if (input.type === "found") {
-        me.stats.itemsFound += 1;
-        awardPoints(d, w, ctx, me.id, "post_found", `Posted a found item · ${item.title}`, id);
-      } else {
-        me.stats.itemsLost += 1;
-      }
-
-      // Tell the owners of strongly-matching listings
-      for (const m of mockMatchingService.getMatches(item, w.items)) {
-        if (m.score < 70) continue;
-        const other = w.itemById.get(otherItemId(m, item));
-        if (!other || other.ownerId === me.id) continue;
-        pushNote(d, ctx, {
-          userId: other.ownerId,
-          type: "match",
-          title: `🎯 New potential match for your ${other.type} ${other.title.split("—")[0].trim()}`,
-          body: `${item.title} near ${getLocation(item.locationId).name} · ${m.score}% match.`,
-          href: `/item/${slug}`,
-          itemId: id,
-        });
-      }
-    });
-    return created;
+    return run("createItem", input)?.result ?? null;
   },
 
   toggleLike(itemId: string) {
-    const me = state.sessionUserId;
-    if (!me) return false;
-    commit((d, w) => {
-      const list = (d.likes[me] ??= []);
-      const i = list.indexOf(itemId);
-      const it = itemDraft(d, w, itemId);
-      if (i >= 0) {
-        list.splice(i, 1);
-        if (it) it.likes = Math.max(0, it.likes - 1);
-      } else {
-        list.push(itemId);
-        if (it) it.likes += 1;
-      }
-    });
+    if (!getState().sessionUserId) return false;
+    run("toggleLike", { itemId });
     return true;
   },
 
   toggleSave(itemId: string) {
-    const me = state.sessionUserId;
-    if (!me) return false;
-    let saved = false;
-    commit((d) => {
-      const list = (d.saves[me] ??= []);
-      const i = list.indexOf(itemId);
-      if (i >= 0) list.splice(i, 1);
-      else {
-        list.push(itemId);
-        saved = true;
-      }
-    });
-    toast(saved ? "Saved to your list" : "Removed from saved", { tone: "info" });
-    return true;
+    const done = run("toggleSave", { itemId });
+    if (done) toast(done.result ? "Saved to your list" : "Removed from saved", { tone: "info" });
   },
 
   toggleFollow(userId: string) {
-    const me = state.sessionUserId;
-    if (!me || me === userId) return;
-    let following = false;
-    commit((d) => {
-      const list = (d.follows[me] ??= []);
-      const i = list.indexOf(userId);
-      if (i >= 0) list.splice(i, 1);
-      else {
-        list.push(userId);
-        following = true;
-      }
-    });
-    toast(following ? "Following" : "Unfollowed", { tone: "info" });
+    const done = run("toggleFollow", { userId });
+    if (done) toast(done.result ? "Following" : "Unfollowed", { tone: "info" });
   },
 
   blockUser(userId: string) {
-    const me = state.sessionUserId;
-    if (!me) return;
-    commit((d) => {
-      const list = (d.blocked[me] ??= []);
-      if (!list.includes(userId)) list.push(userId);
-    });
-    toast("User blocked", { body: "They can no longer message you.", tone: "info" });
-  },
-
-  addComment(itemId: string) {
-    commit((d, w) => {
-      const it = itemDraft(d, w, itemId);
-      if (it) it.comments += 1;
-    });
+    if (run("blockUser", { userId })) toast("User blocked", { body: "They can no longer message you.", tone: "info" });
   },
 
   /**
-   * Mark a listing reunited. `counterpartId` is the other party (finder for lost items, the person who lost it for found ones).
-   * Any bounty is settled directly between the two of them; `paidVia` records how the owner says they paid it.
+   * Mark your listing reunited. `counterpartId` is the other party (finder for lost items, the person who lost it for found ones).
+   * Any bounty is settled directly between the two of you; `paidVia` records how you paid it.
    */
   resolveItem(itemId: string, counterpartId?: string, paidVia?: PaymentMethod) {
-    commit((d, w, ctx) => {
-      const item = itemDraft(d, w, itemId);
-      if (!item || item.status === "resolved") return;
-      item.status = "resolved";
-      item.resolvedAt = ctx.nowIso;
-
-      const finderId = item.type === "lost" ? counterpartId : item.ownerId;
-      const seekerId = item.type === "lost" ? item.ownerId : counterpartId;
-      item.resolvedWithUserId = item.type === "lost" ? finderId : seekerId;
-
-      const offered = item.bountyId ? bountyDraft(d, w, item.bountyId) : undefined;
-      // No finder, nobody to pay — the offer simply lapses.
-      const bounty = finderId ? offered : undefined;
-      if (offered && !bounty) offered.status = "cancelled";
-      if (bounty) {
-        bounty.status = "paid";
-        bounty.paidVia = paidVia;
-        for (const c of w.claims.filter((c) => c.itemId === item.id && c.claimantId === finderId)) {
-          const cd = claimDraft(d, w, c.id);
-          if (cd) cd.status = "received";
-        }
-      }
-
-      if (finderId) {
-        const f = userDraft(d, w, finderId);
-        if (f) {
-          const area = getLocation(item.locationId).area;
-          const isNewArea = !f.areaPoints[area];
-          f.stats.itemsReturned += 1;
-          f.stats.helpedThisMonth += 1;
-          if (bounty) f.stats.bountyReturns += 1;
-          if (item.category === "electronics") f.stats.electronicsReturned += 1;
-          if (isNewArea) f.stats.areasHelped += 1;
-          const kind: PointsKind = bounty ? "bounty_return" : "return";
-          const label = `Returned ${item.title}${bounty ? ` · ${formatMoney(bounty.amount)} bounty` : ""}`;
-          const pts = awardPoints(d, w, ctx, f.id, kind, label, item.id);
-          f.areaPoints[area] = (f.areaPoints[area] ?? 0) + pts;
-          pushNote(d, ctx, {
-            userId: f.id,
-            type: "update",
-            title: bounty ? `💰 ${formatMoney(bounty.amount)} bounty paid${paidVia ? ` via ${paymentLabel(paidVia)}` : ""}` : "🎉 Your item has been marked as returned",
-            body: `${item.title} found its way home. +${pts} points`,
-            href: `/item/${item.slug}`,
-            itemId: item.id,
-          });
-        }
-      }
-      if (seekerId) {
-        const l = userDraft(d, w, seekerId);
-        if (l && !l.badges.includes("helpful-poster")) l.badges.push("helpful-poster");
-      }
-
-      const conv = w.conversations.find(
-        (c) => c.itemId === item.id && (!counterpartId || c.participantIds.includes(counterpartId)),
-      );
-      if (conv) {
-        const cd = convDraft(d, w, conv.id);
-        if (cd) {
-          cd.returned = true;
-          addMessage(d, ctx, cd, d.sessionUserId ?? item.ownerId, { kind: "system", text: "Item returned 🎉" });
-        }
-      }
-    });
+    run("resolveItem", { itemId, counterpartId, paidVia });
   },
 
-  /* Moderation / admin */
+  /* Moderation */
   setModeration(itemId: string, moderation: ModerationState) {
-    commit((d, w) => {
-      const it = itemDraft(d, w, itemId);
-      if (it) it.moderation = moderation;
-    });
+    run("setModeration", { itemId, moderation });
   },
 
   setSuspended(userId: string, suspended: boolean) {
-    commit((d, w) => {
-      const u = userDraft(d, w, userId);
-      if (u) u.suspended = suspended;
-    });
+    run("setSuspended", { userId, suspended });
   },
 
   setReportStatus(reportId: string, status: ReportStatus) {
-    commit((d, w) => {
-      const r = reportDraft(d, w, reportId);
-      if (r) r.status = status;
-    });
+    run("setReportStatus", { reportId, status });
   },
 
   /** Moderator override on a bounty claim (flag as suspicious, reject, or reopen the bounty). */
   setClaimStatus(claimId: string, status: ClaimStatus, note?: string) {
-    commit((d, w, ctx) => {
-      const c = claimDraft(d, w, claimId);
-      if (!c) return;
-      c.status = status;
-      if (note) c.ownerNote = note;
-      const b = bountyDraft(d, w, c.bountyId);
-      if (b && (status === "flagged" || status === "rejected") && b.status === "claimed") {
-        const others = w.claims.some((x) => x.bountyId === b.id && x.id !== c.id && (x.status === "submitted" || x.status === "more_info" || x.status === "approved"));
-        if (!others) b.status = "open";
-      }
-      if (status === "flagged") {
-        pushNote(d, ctx, {
-          userId: c.claimantId,
-          type: "update",
-          title: "🛡️ Your claim was flagged",
-          body: "A moderator is reviewing it. Never ask owners for payment before returning an item.",
-          href: `/item/${w.itemById.get(c.itemId)?.slug ?? ""}`,
-        });
-      }
-    });
+    run("setClaimStatus", { claimId, status, note });
   },
 
   submitReport(input: { targetType: ReportTarget; targetId: string; reason: string; detail?: string }) {
-    const me = state.sessionUserId;
-    commit((d, _w, ctx) => {
-      const id = uid("rep");
-      d.reports[id] = { id, reporterId: me ?? "anonymous", status: "open", at: ctx.nowIso, ...input };
-    });
-    toast("Report sent", { body: "Thanks — our moderators will review it shortly.", tone: "info" });
+    if (run("submitReport", input)) toast("Report sent", { body: "Thanks — our moderators will review it shortly.", tone: "info" });
   },
 
   /* Bounty claims */
   submitClaim(input: { itemId: string; message: string; proof: ItemImage[] }): Claim | null {
-    let claim: Claim | null = null;
-    commit((d, w, ctx) => {
-      const me = d.sessionUserId;
-      const item = w.itemById.get(input.itemId);
-      if (!me || !item || !item.bountyId) return;
-      const bounty = bountyDraft(d, w, item.bountyId);
-      if (!bounty) return;
-      const conv = ensureConversation(d, w, item.id, me, item.ownerId);
-      const c: Claim = {
-        id: uid("clm"),
-        bountyId: bounty.id,
-        itemId: item.id,
-        claimantId: me,
-        status: "submitted",
-        proof: input.proof,
-        message: input.message,
-        createdAt: ctx.nowIso,
-        conversationId: conv.id,
-      };
-      d.claims[c.id] = c;
-      claim = c;
-      conv.claimId = c.id;
-      if (bounty.status === "open") bounty.status = "claimed";
-      addMessage(d, ctx, conv, me, { kind: "text", text: input.message });
-      for (const p of input.proof) addMessage(d, ctx, conv, me, { kind: "photo", photo: p });
-      pushNote(d, ctx, {
-        userId: item.ownerId,
-        type: "bounty",
-        title: `💰 ${formatMoney(bounty.amount)} bounty claim received`,
-        body: `${w.userById.get(me)?.name ?? "Someone"} says they found your ${item.title.split("—")[0].trim()}.`,
-        href: `/messages/${conv.id}`,
-        itemId: item.id,
-      });
-    });
-    if (claim) {
-      const c = claim as Claim;
-      const owner = getWorld().itemById.get(c.itemId)?.ownerId;
-      if (owner && owner !== state.sessionUserId) simulateOwnerReview(c.id, 6500);
-    }
-    return claim;
+    return run("submitClaim", input)?.result ?? null;
   },
 
   respondClaim(claimId: string, decision: "approve" | "reject" | "more_info", note?: string) {
-    commit((d, w, ctx) => {
-      const claim = claimDraft(d, w, claimId);
-      if (!claim) return;
-      const item = w.itemById.get(claim.itemId);
-      const bounty = bountyDraft(d, w, claim.bountyId);
-      if (!item || !bounty) return;
-      const conv = claim.conversationId ? convDraft(d, w, claim.conversationId) : undefined;
-      const me = d.sessionUserId ?? item.ownerId;
-      if (decision === "approve") {
-        claim.status = "approved";
-        bounty.status = "approved";
-        bounty.winningClaimId = claim.id;
-        if (conv) addMessage(d, ctx, conv, me, { kind: "system", text: "Claim approved — arrange the return in a public place." });
-        pushNote(d, ctx, {
-          userId: claim.claimantId,
-          type: "bounty",
-          title: "💰 Your claim was approved",
-          body: "The owner verified your claim. Arrange the return.",
-          href: `/messages/${claim.conversationId ?? ""}`,
-          itemId: item.id,
-        });
-      } else if (decision === "reject") {
-        claim.status = "rejected";
-        claim.ownerNote = note;
-        if (bounty.status === "claimed" && !w.claims.some((c) => c.bountyId === bounty.id && c.id !== claim.id && (c.status === "submitted" || c.status === "more_info"))) bounty.status = "open";
-        if (conv) addMessage(d, ctx, conv, me, { kind: "system", text: "Claim declined." });
-        pushNote(d, ctx, {
-          userId: claim.claimantId,
-          type: "bounty",
-          title: "Your claim wasn't approved",
-          body: note ?? "The owner couldn't verify the details.",
-          href: `/messages/${claim.conversationId ?? ""}`,
-          itemId: item.id,
-        });
-      } else {
-        claim.status = "more_info";
-        claim.ownerNote = note;
-        if (conv) addMessage(d, ctx, conv, me, { kind: "text", text: note ?? "Could you share more details to help me verify?" });
-      }
-    });
+    run("respondClaim", { claimId, decision, note });
   },
 
   /* Chat */
   startConversation(itemId: string): string | null {
-    const me = state.sessionUserId;
-    const item = getWorld().itemById.get(itemId);
-    if (!me || !item || item.ownerId === me) return null;
-    let id = "";
-    commit((d, w) => {
-      id = ensureConversation(d, w, itemId, me, item.ownerId).id;
-    });
-    return id;
+    return run("startConversation", { itemId })?.result ?? null;
   },
 
-  sendMessage(convId: string, m: { kind: MessageKind; text?: string; photo?: ItemImage; locationId?: string }) {
-    const me = state.sessionUserId;
-    if (!me) return;
-    commit((d, w, ctx) => {
-      const conv = convDraft(d, w, convId);
-      if (conv) addMessage(d, ctx, conv, me, m);
-    });
-    scheduleReply(convId);
+  sendMessage(convId: string, message: MessageInput) {
+    run("sendMessage", { convId, message });
   },
 
   markConversationRead(convId: string) {
-    const me = state.sessionUserId;
-    const conv = getWorld().conversationById.get(convId);
-    if (!me || !conv) return;
-    const last = conv.messages[conv.messages.length - 1];
-    if (!last || (conv.readAt[me] && Date.parse(conv.readAt[me]) >= Date.parse(last.at))) return;
-    commit((d, w) => {
-      const c = convDraft(d, w, convId);
-      if (c) c.readAt[me] = last.at;
-    });
+    const s = getState();
+    const conv = s.conversations[convId];
+    const me = s.sessionUserId;
+    const last = conv?.messages[conv.messages.length - 1];
+    if (!me || !conv || !last || (conv.readAt[me] && Date.parse(conv.readAt[me]) >= Date.parse(last.at))) return;
+    run("markConversationRead", { convId });
   },
 
   /** "Item returned" quick action from inside a conversation. `paidVia` is how the owner paid any bounty. */
   markReturned(convId: string, paidVia?: PaymentMethod) {
-    const w = getWorld();
-    const me = state.sessionUserId;
-    const conv = w.conversationById.get(convId);
-    const item = conv && w.itemById.get(conv.itemId);
-    if (!me || !conv || !item) return;
-    const other = conv.participantIds.find((p) => p !== me);
-    if (!other) return;
-    const iAmFinderOnLost = item.type === "lost" && item.ownerId !== me;
-    if (iAmFinderOnLost) {
-      commit((d, w2, ctx) => {
-        const c = convDraft(d, w2, convId);
-        if (c) addMessage(d, ctx, c, me, { kind: "quick", text: "Item returned" });
-      });
-      toast("Waiting for the owner to confirm", { body: "They'll tap “Mark as received” once they have it.", tone: "info" });
-      // The simulated owner confirms, and pays any bounty by PayNow.
-      setTimeout(() => actions.resolveItem(item.id, me, item.bountyId ? "paynow" : undefined), 3500);
-    } else {
-      actions.resolveItem(item.id, other, paidVia);
-    }
+    const done = run("markReturned", { convId, paidVia });
+    if (done && !done.result) toast("Waiting for the owner to confirm", { body: "They'll tap “Mark as received” once they have it.", tone: "info" });
   },
 
   /** The owner of a lost item confirms a found listing matches. Rewards the finder. */
   confirmMatch(lostItemId: string, foundItemId: string): string | null {
-    const w = getWorld();
-    const me = state.sessionUserId;
-    const found = w.itemById.get(foundItemId);
-    const lost = w.itemById.get(lostItemId);
-    if (!me || !found || !lost || found.ownerId === me) return null;
-    const already = w.points.some((p) => p.kind === "confirm_match" && p.userId === found.ownerId && p.itemId === foundItemId);
-    let convId = "";
-    commit((d, w2, ctx) => {
-      if (!already) {
-        awardPoints(d, w2, ctx, found.ownerId, "confirm_match", `Helped confirm a match · ${found.title}`, foundItemId);
-        pushNote(d, ctx, {
-          userId: found.ownerId,
-          type: "match",
-          title: "🎯 Your found item was confirmed as a match",
-          body: `${w2.userById.get(me)?.name ?? "The owner"} says your ${found.title.split("—")[0].trim()} is theirs. +10 points`,
-          href: `/item/${found.slug}`,
-          itemId: found.id,
-        });
-      }
-      convId = ensureConversation(d, w2, foundItemId, me, found.ownerId).id;
-    });
-    toast("Match confirmed 🎯", { body: `${w.userById.get(found.ownerId)?.name.split(" ")[0] ?? "The finder"} has been notified.`, tone: "celebrate" });
-    return convId;
+    const s = getState();
+    const finder = s.users[s.items[foundItemId]?.ownerId ?? ""];
+    const done = run("confirmMatch", { lostItemId, foundItemId });
+    if (!done) return null;
+    toast("Match confirmed 🎯", { body: `${finder?.name.split(" ")[0] ?? "The finder"} has been notified.`, tone: "celebrate" });
+    return done.result;
   },
 
   /* Kudos */
   sendKudos(input: { toUserId: string; tone: KudosTone; message: string; itemId?: string }) {
-    commit((d, w, ctx) => {
-      const me = d.sessionUserId;
-      if (!me) return;
-      d.kudos.push({ id: uid("k"), fromUserId: me, at: ctx.nowIso, ...input });
-      const recipient = userDraft(d, w, input.toUserId);
-      if (recipient) {
-        awardPoints(d, w, ctx, recipient.id, "thank_you", `Received thank you from ${w.userById.get(me)?.name ?? "a member"}`, input.itemId);
-        pushNote(d, ctx, {
-          userId: recipient.id,
-          type: "kudos",
-          title: `❤️ ${w.userById.get(me)?.name ?? "Someone"} thanked you`,
-          body: `“${input.message}” · +20 points`,
-          href: `/user/${recipient.handle}`,
-        });
-      }
-    });
-    toast("Thank you sent ❤️", { body: "Your kudos will appear on their profile.", tone: "celebrate" });
+    if (run("sendKudos", input)) toast("Thank you sent ❤️", { body: "Your kudos will appear on their profile.", tone: "celebrate" });
   },
 
   /* Notifications */
   markNotificationRead(id: string) {
-    const n = getWorld().notifications.find((x) => x.id === id);
+    const n = getState().notifications[id];
     if (!n || n.read) return;
-    commit((d) => {
-      d.notifications[id] = { ...n, read: true };
-    });
+    run("markNotificationRead", { id });
   },
 
   markAllNotificationsRead() {
-    const me = state.sessionUserId;
-    if (!me) return;
-    const unread = getWorld().notifications.filter((n) => n.userId === me && !n.read);
-    if (!unread.length) return;
-    commit((d) => {
-      for (const n of unread) d.notifications[n.id] = { ...n, read: true };
-    });
-  },
-
-  /* Demo utilities */
-  resetDemo() {
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
-    state = { ...EMPTY_OVERLAY, clockStart: Date.now() };
-    persist();
-    notify();
-    toast("Demo data reset", { tone: "info" });
+    const s = getState();
+    if (!Object.values(s.notifications).some((n) => n.userId === s.sessionUserId && !n.read)) return;
+    run("markAllNotificationsRead", undefined);
   },
 };
-
-/** Simulated owner reviewing a claim after a short delay. */
-function simulateOwnerReview(claimId: string, delay: number) {
-  setTimeout(() => {
-    const w = getWorld();
-    const claim = w.claimById.get(claimId);
-    if (!claim || claim.status !== "submitted") return;
-    const item = w.itemById.get(claim.itemId);
-    const owner = item && w.userById.get(item.ownerId);
-    if (!item || !owner || owner.id === state.sessionUserId) return;
-    commit((d, w2, ctx) => {
-      const c = claimDraft(d, w2, claimId);
-      const b = bountyDraft(d, w2, claim.bountyId);
-      const conv = claim.conversationId ? convDraft(d, w2, claim.conversationId) : undefined;
-      if (!c || !b) return;
-      c.status = "approved";
-      b.status = "approved";
-      b.winningClaimId = c.id;
-      if (conv) {
-        addMessage(d, ctx, conv, owner.id, { kind: "text", text: "Yes, that's mine!! The sticker and scratch match. Thank you so much 🙏 Can we meet at the station's customer service counter?" });
-        addMessage(d, ctx, conv, owner.id, { kind: "system", text: "Claim approved — arrange the return in a public place." });
-      }
-      pushNote(d, ctx, {
-        userId: claim.claimantId,
-        type: "bounty",
-        title: "💰 Your claim was approved",
-        body: `${owner.name} verified your claim. Arrange the return.`,
-        href: `/messages/${claim.conversationId ?? ""}`,
-        itemId: item.id,
-      });
-    });
-    toast("Claim approved 🎉", { body: `${owner.name} verified your proof. Arrange the return.`, tone: "celebrate", href: claim.conversationId ? `/messages/${claim.conversationId}` : undefined });
-  }, delay);
-}
-
-/** Called once on app mount: resume any simulation that a reload interrupted. */
-export function resumeSimulations() {
-  const me = state.sessionUserId;
-  if (!me) return;
-  for (const c of getWorld().claims) {
-    if (c.claimantId === me && c.status === "submitted") simulateOwnerReview(c.id, 4000);
-  }
-}

@@ -1,6 +1,7 @@
-// Cloudflare Workers — serves the static export in ./out, plus a small Worker (worker/) that handles
-// /api/* (sign-in and accounts). Everything else is answered straight from the asset store without
-// running Worker code. Each environment is its own Worker with its own database and secrets:
+// Cloudflare Workers — serves the static export in ./out, plus a Worker (worker/) that is the backend:
+// accounts, the members' data and their photos under /api/*, and the listing/profile/conversation
+// pages. Everything else is answered straight from the asset store without running Worker code.
+// Each environment is its own Worker with its own database, photo bucket and secrets:
 //
 //   dev   →  wewillfind-it-dev   →  https://dev.wewillfind.it   (npm run deploy:dev,  `dev` branch)
 //   prod  →  wewillfind-it-prod  →  https://wewillfind.it       (npm run deploy:prod, `main` branch)
@@ -25,8 +26,9 @@
     "html_handling": "auto-trailing-slash",
     // Unknown URLs get 404.html with a 404 status — StaticHostFallback relies on this.
     "not_found_handling": "404-page",
-    // Only API calls reach the Worker.
-    "run_worker_first": ["/api/*"]
+    "binding": "ASSETS",
+    // The API, and the pages that are drawn from the database (see worker/pages.ts).
+    "run_worker_first": ["/api/*", "/item/*", "/user/*", "/messages/*"]
   },
   "observability": { "enabled": true },
   // Custom domains only: no *.workers.dev copies of the site.
@@ -35,7 +37,11 @@
   "env": {
     "dev": {
       "routes": [{ "pattern": "dev.wewillfind.it", "custom_domain": true }],
-      "vars": { "SITE_URL": "https://dev.wewillfind.it" },
+      "vars": {
+        "SITE_URL": "https://dev.wewillfind.it",
+        // Accounts with these (verified) email addresses are moderators. Comma-separated.
+        "ADMIN_EMAILS": "dylanlyq@gmail.com"
+      },
       "d1_databases": [
         {
           "binding": "DB",
@@ -44,11 +50,16 @@
           "migrations_dir": "migrations"
         }
       ],
+      "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "wewillfind-it-dev-uploads" }],
       "secrets": { "required": ["BETTER_AUTH_SECRET"] }
     },
     "prod": {
       "routes": [{ "pattern": "wewillfind.it", "custom_domain": true }],
-      "vars": { "SITE_URL": "https://wewillfind.it" },
+      "vars": {
+        "SITE_URL": "https://wewillfind.it",
+        // Accounts with these (verified) email addresses are moderators. Comma-separated.
+        "ADMIN_EMAILS": "dylanlyq@gmail.com"
+      },
       "d1_databases": [
         {
           "binding": "DB",
@@ -57,6 +68,7 @@
           "migrations_dir": "migrations"
         }
       ],
+      "r2_buckets": [{ "binding": "UPLOADS", "bucket_name": "wewillfind-it-prod-uploads" }],
       "secrets": { "required": ["BETTER_AUTH_SECRET"] }
     }
   }

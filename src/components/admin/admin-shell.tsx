@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import { Coins, FileText, Flag, LayoutGrid, PackageCheck, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useWorld } from "@/lib/store/hooks";
-import { actions } from "@/lib/store/store";
 import { Button } from "../ui/button";
 import { Logo } from "../brand/logo";
 import { EmptyState } from "../ui/states";
@@ -45,7 +44,7 @@ function Nav({ counts }: { counts: Record<string, number> }) {
   );
 }
 
-/** Moderators only. (In this demo, anyone can switch to the moderator account.) */
+/** Moderators only — the API decides who is one (ADMIN_EMAILS) and refuses everyone else's changes. */
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const w = useWorld();
   const me = w.currentUser;
@@ -59,21 +58,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     resolved: 0,
   };
 
+  if (!w.ready) return <div className="min-h-dvh bg-canvas" />;
+
   if (me?.role !== "admin") {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-canvas px-4">
         <EmptyState
           icon={<ShieldCheck className="size-9" aria-hidden />}
           title="Moderators only"
-          body="This area is for the wewillfind.it moderation team. In this demo you can switch to the moderator account."
+          body="This area is for the wewillfind.it moderation team."
           tone="coral"
           action={
-            <>
-              <Button onClick={() => actions.login("u_admin")}>Switch to moderator account</Button>
-              <Button href="/" variant="secondary">
-                Back to site
-              </Button>
-            </>
+            <Button href="/" variant="secondary">
+              Back to site
+            </Button>
           }
         />
       </div>
@@ -91,9 +89,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-2">
             <Button href="/" variant="ghost" size="sm">
               Back to site
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => actions.login("u_dylan")}>
-              Switch to Dylan
             </Button>
           </div>
         </div>

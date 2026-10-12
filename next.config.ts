@@ -45,7 +45,6 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_SITE_URL: siteUrl,
-    NEXT_PUBLIC_STATIC_EXPORT: String(staticExport),
   },
   ...(staticExport && {
     output: "export" as const,

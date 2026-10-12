@@ -1,21 +1,10 @@
 /**
- * The seed world is frozen at a fixed "now" so server and client always agree
- * (and so prerendering never touches the real clock). On the client the demo
- * clock then ticks forward from this anchor — see `useNow()`.
+ * Prerendering must never read the real clock (the build would bake in its own time, and the
+ * browser's first render has to match it). Pages are built as of this fixed instant; the browser
+ * switches to the real time right after hydration — see `useNow()`.
  */
-export const DEMO_NOW_ISO = "2026-10-08T15:30:00+08:00";
-export const DEMO_NOW = Date.parse(DEMO_NOW_ISO);
+export const PRERENDER_NOW = Date.parse("2026-10-08T15:30:00+08:00");
 
 export const MIN = 60_000;
 export const HOUR = 60 * MIN;
 export const DAY = 24 * HOUR;
-
-/** ISO string for `ms` before the demo anchor — used to author seed data readably. */
-export function ago(ms: number): string {
-  return new Date(DEMO_NOW - ms).toISOString();
-}
-
-/** ISO string for `ms` after the demo anchor. */
-export function fromNow(ms: number): string {
-  return new Date(DEMO_NOW + ms).toISOString();
-}

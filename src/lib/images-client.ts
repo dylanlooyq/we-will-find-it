@@ -1,7 +1,6 @@
 /**
- * Reads a user-picked image and downsizes it to a compact JPEG data URL so
- * a handful of photos fits comfortably in localStorage (and, later, uploads
- * fast over a phone connection).
+ * Reads a user-picked image and downsizes it to a compact JPEG data URL, so it shows at once and
+ * uploads fast over a phone connection (the store uploads it when the action is sent).
  */
 export async function fileToDataUrl(file: File, maxDim = 960, quality = 0.74): Promise<string> {
   const bitmap = await createImageBitmap(file).catch(() => null);

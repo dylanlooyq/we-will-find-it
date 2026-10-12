@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Eye, EyeOff, Inbox, MailCheck, Users } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Inbox, MailCheck } from "lucide-react";
 import { authClient, authErrorMessage } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
 import { areas } from "@/lib/data/taxonomy";
-import { DEMO_PERSONAS } from "@/lib/data/users";
 import { useWorld } from "@/lib/store/hooks";
-import { actions } from "@/lib/store/store";
+import { actions, refreshWorld } from "@/lib/store/store";
 import { toast } from "@/lib/store/events";
 import { UserAvatar } from "../ui/avatar";
 import { Button } from "../ui/button";
@@ -104,7 +103,6 @@ export function LoginForm() {
   // Google sends a failed sign-in back here with ?error=…
   const [formErr, setFormErr] = useState(sp.get("error") ? "Google sign-in didn't complete. Please try again." : undefined);
   const [busy, setBusy] = useState(false);
-  const w = useWorld();
 
   return (
     <div>
@@ -129,7 +127,8 @@ export function LoginForm() {
             if (error.code === "EMAIL_NOT_VERIFIED") return router.push(verifyUrl(email.trim(), next));
             return setFormErr(authErrorMessage(error));
           }
-          actions.syncAuth(data.user);
+          // Read this member's data before moving on, so the next page opens signed in.
+          await refreshWorld(true);
           toast(`Welcome back, ${data.user.name.split(" ")[0]}`, { tone: "info" });
           router.push(next);
         }}
@@ -147,34 +146,6 @@ export function LoginForm() {
         </Button>
       </form>
 
-      <div className="mt-8 rounded-2xl bg-navy-50 p-4">
-        <p className="flex items-center gap-2 text-sm font-extrabold text-navy-900">
-          <Users className="size-4" aria-hidden /> Try a demo account
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {DEMO_PERSONAS.map((id) => {
-            const u = w.userById.get(id);
-            if (!u) return null;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  actions.login(id);
-                  router.push(next);
-                }}
-                className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 text-left shadow-soft transition hover:shadow-lift"
-              >
-                <UserAvatar user={u} size="sm" />
-                <span className="min-w-0 text-[0.82rem] font-bold leading-tight text-navy-900">
-                  <span className="block truncate">{u.name}</span>
-                  <span className="block truncate text-[0.68rem] font-medium text-navy-500">{id === "u_dylan" ? "Finder · default" : id === "u_priya" ? "Owns S$200 bounty" : id === "u_marcus" ? "Top finder" : "Moderator"}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
@@ -409,7 +380,7 @@ export function WelcomeSetup() {
   const { data: session, isPending } = authClient.useSession();
 
   // Arriving from the email link or from Google, the session is known a moment before its profile is.
-  if (isPending || (session && me?.authId !== session.user.id)) return <div className="h-72" />;
+  if (isPending || !w.ready || (session && me?.authId !== session.user.id)) return <div className="h-72" />;
 
   if (!me) {
     return (

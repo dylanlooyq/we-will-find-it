@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Send, X } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { DEMO_NOW } from "@/lib/clock";
+import { PRERENDER_NOW } from "@/lib/clock";
 import {
   STEP_TITLES,
   draftPreviewItem,
@@ -46,7 +46,7 @@ export function PostFlow({ kind }: { kind: PostKind }) {
   const me = w.currentUser;
   const today = sgDate(now);
 
-  const [draft, setDraft] = useState<Draft>(() => emptyDraft(kind, sgDate(DEMO_NOW)));
+  const [draft, setDraft] = useState<Draft>(() => emptyDraft(kind, sgDate(PRERENDER_NOW)));
   const [rawStep, setI] = useState(0);
   const [errors, setErrors] = useState<StepErrors>({});
   const [publishedId, setPublishedId] = useState<string | null>(null);
@@ -68,11 +68,10 @@ export function PostFlow({ kind }: { kind: PostKind }) {
   useEffect(() => {
     const t = setTimeout(() => {
       try {
+        // The page was built with a fixed date; a new draft starts from today.
         const raw = window.localStorage.getItem(DRAFT_KEY(kind));
-        if (raw) {
-          const saved = JSON.parse(raw) as Saved;
-          setDraft((d) => ({ ...d, ...saved, images: d.images }));
-        }
+        const saved = raw ? (JSON.parse(raw) as Saved) : {};
+        setDraft((d) => ({ ...d, date: sgDate(Date.now()), ...saved, images: d.images }));
       } catch {
         /* ignore */
       }
@@ -143,11 +142,8 @@ export function PostFlow({ kind }: { kind: PostKind }) {
     }
     setPublishing(true);
     const created = actions.createItem(draftToInput(draft));
-    if (!created) {
-      setPublishing(false);
-      toast("Couldn't publish — please try again", { tone: "error" });
-      return;
-    }
+    // If it isn't allowed, the store has already said why.
+    if (!created) return setPublishing(false);
     try {
       window.localStorage.removeItem(DRAFT_KEY(kind));
     } catch {
@@ -157,7 +153,7 @@ export function PostFlow({ kind }: { kind: PostKind }) {
     setPublishing(false);
   };
 
-  const preview = useMemo(() => draftPreviewItem(draft, new Date(now).toISOString(), me?.id ?? "u_dylan"), [draft, now, me?.id]);
+  const preview = useMemo(() => draftPreviewItem(draft, new Date(now).toISOString(), me?.id ?? ""), [draft, now, me?.id]);
   const previewBounty = draft.type === "lost" && draft.bounty ? Number(draft.bountyAmount) || undefined : undefined;
 
   if (publishedId) {

@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { getLocation } from "@/lib/data/taxonomy";
 import { formatDate, formatMoney } from "@/lib/format";
 import { fileToDataUrl } from "@/lib/images-client";
-import { useHydrated, useIsTyping, useNow, useWorld } from "@/lib/store/hooks";
+import { useHydrated, useNow, useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
 import { toast } from "@/lib/store/events";
 import type { Message } from "@/lib/types";
@@ -64,7 +64,6 @@ export function ThreadView({ id }: { id: string }) {
   const item = conv ? w.itemById.get(conv.itemId) : undefined;
   const otherId = conv && me ? conv.participantIds.find((p) => p !== me.id) : undefined;
   const other = otherId ? w.userById.get(otherId) : undefined;
-  const typing = useIsTyping(id);
 
   const [text, setText] = useState("");
   // `?arrange=1` (from the claim tracker) opens the sheet; once the user toggles it, their choice wins.
@@ -86,12 +85,12 @@ export function ThreadView({ id }: { id: string }) {
     if (!hydrated || !conv) return;
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     actions.markConversationRead(id);
-  }, [msgCount, typing, hydrated, id, conv]);
+  }, [msgCount, hydrated, id, conv]);
 
   const grouped = conv ? groupByDay(conv.messages, now) : [];
 
   if (!conv || !item || !me || !other) {
-    if (!hydrated) {
+    if (!hydrated || !w.ready) {
       return (
         <div className="space-y-4 p-6">
           <Skeleton className="h-16" />
@@ -105,7 +104,7 @@ export function ThreadView({ id }: { id: string }) {
         <EmptyState
           icon={<MessageCircle className="size-9" aria-hidden />}
           title={me ? "We can't find that conversation" : "Log in to see this conversation"}
-          body="It may belong to another account. Switch accounts from the menu, or head back to your inbox."
+          body="It may belong to another account. Head back to your inbox to see yours."
           tone="coral"
           action={me ? <Button href="/messages">Back to messages</Button> : <Button href={`/login?next=/messages/${id}`}>Log in</Button>}
         />
@@ -276,15 +275,6 @@ export function ThreadView({ id }: { id: string }) {
             </ul>
           </div>
         ))}
-        {typing && (
-          <div className="mt-3 flex items-center gap-2" aria-label={`${other.name} is typing`}>
-            <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-white px-4 py-3 shadow-soft ring-1 ring-line/70">
-              {[0, 1, 2].map((i) => (
-                <span key={i} className="size-2 rounded-full bg-navy-300 animate-typing" style={{ animationDelay: `${i * 0.16}s` }} />
-              ))}
-            </div>
-          </div>
-        )}
         {resolved && (
           <div className="mx-auto mt-6 max-w-sm rounded-2xl bg-mint-50 p-4 text-center ring-1 ring-mint-200">
             <PartyPopper className="mx-auto size-6 text-mint-700" aria-hidden />

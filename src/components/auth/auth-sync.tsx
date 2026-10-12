@@ -1,24 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { authClient } from "@/lib/auth-client";
-import { actions } from "@/lib/store/store";
+import { forgetWorld, refreshWorld, startSync } from "@/lib/store/store";
 
 /**
- * Mounted once at the root. Keeps the store's session user in step with the real sign-in session:
- * signing in (here or in another tab) switches to that account's profile, signing out leaves it.
+ * Mounted once at the root. Starts the background refresh of the member's data, and re-reads all of
+ * it whenever the signed-in account changes (here or in another tab) — each member sees a different slice.
  */
 export function AuthSync() {
   const { data, isPending, error } = authClient.useSession();
-  const id = data?.user.id;
-  const name = data?.user.name;
-  const emailVerified = data?.user.emailVerified;
+  const account = data?.user.id ?? null;
+  const verified = !!data?.user.emailVerified;
+  const seen = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => startSync(), []);
 
   useEffect(() => {
-    // An unreachable API says nothing about who is signed in — leave the store as it is.
     if (isPending || error) return;
-    actions.syncAuth(id ? { id, name: name ?? "", emailVerified: !!emailVerified } : null);
-  }, [isPending, error, id, name, emailVerified]);
+    const key = `${account}:${verified}`;
+    const first = seen.current === undefined;
+    if (seen.current === key) return;
+    seen.current = key;
+    // The first answer only confirms who was already signed in; startSync has that read in hand.
+    if (first) return;
+    if (!account) forgetWorld();
+    void refreshWorld(true);
+  }, [isPending, error, account, verified]);
 
   return null;
 }
