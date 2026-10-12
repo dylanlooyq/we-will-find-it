@@ -95,81 +95,78 @@ export function ProfileView({ handle }: { handle: string }) {
   return (
     <Container className="pb-8 pt-5 sm:pt-8">
       {/* ── Header card ───────────────────────────────── */}
-      <section className="overflow-hidden rounded-sheet bg-white shadow-soft" aria-labelledby="profile-name">
-        <div className="relative h-16 overflow-hidden bg-gradient-to-br from-coral-100 via-violet-100 to-found-100 sm:h-20">
-          <div aria-hidden className="absolute -left-8 -top-8 size-32 rounded-full bg-white/50 blur-2xl" />
-          <div aria-hidden className="absolute -top-16 right-10 size-44 rounded-full bg-gold-200/60 blur-3xl" />
-        </div>
-        <div className="relative px-5 pb-4 sm:px-7">
-          <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
-            <div className="relative -mt-9">
-              <UserAvatar user={user} size="xl" ring="white" />
-              {lv.level >= 5 && (
-                <span className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full bg-gold-300 text-gold-900 ring-[3px] ring-white" title={lv.title}>
-                  <Crown className="size-3.5 fill-current" aria-hidden />
-                  <span className="sr-only">{lv.title}</span>
-                </span>
+      {/*
+        One row on a wide screen: avatar and name, the four numbers, the actions. Narrower, the numbers
+        drop to their own line under a hairline; on a phone the actions shrink to icons or their own row.
+      */}
+      <section className="rounded-card bg-white px-4 py-3.5 shadow-soft sm:px-6 sm:py-4" aria-labelledby="profile-name">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-3 sm:gap-x-4">
+          <div className="relative">
+            <UserAvatar user={user} size="lg" />
+            {lv.level >= 5 && (
+              <span className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-full bg-gold-300 text-gold-900 ring-[3px] ring-white" title={lv.title}>
+                <Crown className="size-3.5 fill-current" aria-hidden />
+                <span className="sr-only">{lv.title}</span>
+              </span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 id="profile-name" className="flex flex-wrap items-center gap-1.5 text-xl font-extrabold leading-tight text-navy-900 sm:text-2xl">
+              {user.name}
+              {user.verified && <VerifiedMark className="[&_svg]:size-5" />}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <UserLevel points={user.points.allTime} />
+              {rank > 0 && (
+                <Link href="/leaderboard" className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-bold text-gold-800 hover:bg-gold-200">
+                  <Trophy className="size-3" aria-hidden />#{rank} in Singapore
+                </Link>
               )}
             </div>
-            <div className="min-w-0 flex-1 pt-2.5">
-              <h1 id="profile-name" className="flex flex-wrap items-center gap-1.5 text-2xl font-extrabold leading-tight text-navy-900 sm:text-[1.75rem]">
-                {user.name}
-                {user.verified && <VerifiedMark className="[&_svg]:size-5" />}
-              </h1>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <UserLevel points={user.points.allTime} />
-                {rank > 0 && (
-                  <Link href="/leaderboard" className="inline-flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-bold text-gold-800 hover:bg-gold-200">
-                    <Trophy className="size-3" aria-hidden />#{rank} in Singapore
-                  </Link>
-                )}
-              </div>
-              {user.tagline && <p className="mt-2 text-[0.95rem] font-semibold italic text-navy-700">“{user.tagline}”</p>}
-            </div>
-            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:pt-3">
-              {isMe ? (
-                <>
-                  <Button variant="secondary" onClick={() => setEdit(true)} iconLeft={<Pencil className="size-4" aria-hidden />} className="max-sm:flex-1">
-                    Edit profile
-                  </Button>
-                  <Button variant="ghost" onClick={() => setShare(true)} iconLeft={<Share2 className="size-4" aria-hidden />}>
-                    Share
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant={following ? "secondary" : "primary"}
-                    className="max-sm:flex-1 max-sm:!px-3"
-                    aria-pressed={following}
-                    iconLeft={following ? <Check className="size-4" aria-hidden /> : <UserPlus className="size-4" aria-hidden />}
-                    onClick={() => (me ? actions.toggleFollow(user.id) : router.push(`/login?next=/user/${user.handle}`))}
-                  >
-                    {following ? "Following" : "Follow"}
-                  </Button>
-                  <Button variant="secondary" className="max-sm:flex-1 max-sm:!px-3" onClick={() => (me ? setThanks(true) : router.push(`/login?next=/user/${user.handle}`))} iconLeft={<span aria-hidden>❤️</span>}>
-                    Say thanks
-                  </Button>
-                  <Button variant="ghost" className="max-sm:!px-3" onClick={() => setShare(true)} aria-label="Share profile">
-                    <Share2 className="size-4" aria-hidden />
-                  </Button>
-                </>
-              )}
-            </div>
+            {user.tagline && <p className="mt-1.5 text-sm font-semibold italic text-navy-700">“{user.tagline}”</p>}
           </div>
 
-          {/* One line on wider screens ("0 Items found | 1 Items lost | …"); four small columns on a phone. */}
-          <dl className="mt-4 grid grid-cols-4 gap-2 border-t border-line pt-3.5 text-center sm:flex sm:gap-0 sm:divide-x sm:divide-line sm:text-left">
+          <dl className="order-last grid w-full grid-cols-4 gap-2 border-t border-line pt-2.5 text-center sm:flex sm:gap-0 sm:divide-x sm:divide-line sm:pt-3 sm:text-left xl:order-none xl:mr-3 xl:w-auto xl:border-t-0 xl:pt-0">
             {stats.map((s) => (
-              <div key={s.label} className="sm:flex sm:items-baseline sm:gap-2 sm:px-5 sm:first:pl-0">
-                <dd className="flex items-center justify-center gap-0.5 text-lg font-extrabold tabular-nums leading-tight text-navy-900 sm:text-xl">
+              <div key={s.label} className="sm:flex sm:items-baseline sm:gap-1.5 sm:px-4 sm:first:pl-0">
+                <dd className="flex items-center justify-center gap-0.5 text-base font-extrabold tabular-nums leading-tight text-navy-900 sm:text-lg">
                   {s.value}
-                  {s.star && <span className="text-base text-gold-500" aria-hidden>★</span>}
+                  {s.star && <span className="text-sm text-gold-500" aria-hidden>★</span>}
                 </dd>
-                <dt className="text-[0.68rem] font-semibold text-navy-600 sm:text-sm">{s.label}</dt>
+                <dt className="text-[0.68rem] font-semibold leading-tight text-navy-600 sm:text-sm">{s.label}</dt>
               </div>
             ))}
           </dl>
+
+          {isMe ? (
+            // Your own profile: on a phone the two actions shrink to icons and sit beside your name.
+            <div className="flex shrink-0 gap-1.5 sm:gap-2">
+              <Button variant="secondary" onClick={() => setEdit(true)} iconLeft={<Pencil className="size-4" aria-hidden />} className="max-sm:!size-10 max-sm:!gap-0 max-sm:!px-0">
+                <span className="max-sm:sr-only">Edit profile</span>
+              </Button>
+              <Button variant="ghost" onClick={() => setShare(true)} iconLeft={<Share2 className="size-4" aria-hidden />} className="max-sm:!size-10 max-sm:!gap-0 max-sm:!px-0">
+                <span className="max-sm:sr-only">Share</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Button
+                variant={following ? "secondary" : "primary"}
+                className="max-sm:!h-10 max-sm:flex-1 max-sm:!px-3"
+                aria-pressed={following}
+                iconLeft={following ? <Check className="size-4" aria-hidden /> : <UserPlus className="size-4" aria-hidden />}
+                onClick={() => (me ? actions.toggleFollow(user.id) : router.push(`/login?next=/user/${user.handle}`))}
+              >
+                {following ? "Following" : "Follow"}
+              </Button>
+              <Button variant="secondary" className="max-sm:!h-10 max-sm:flex-1 max-sm:!px-3" onClick={() => (me ? setThanks(true) : router.push(`/login?next=/user/${user.handle}`))} iconLeft={<span aria-hidden>❤️</span>}>
+                Say thanks
+              </Button>
+              <Button variant="ghost" className="max-sm:!size-10 max-sm:!px-0" onClick={() => setShare(true)} aria-label="Share profile">
+                <Share2 className="size-4" aria-hidden />
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
