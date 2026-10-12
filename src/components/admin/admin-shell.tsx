@@ -94,7 +94,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[14rem_minmax(0,1fr)] lg:px-8 lg:py-8">
-        <aside className="lg:sticky lg:top-24 lg:self-start">
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <Suspense fallback={<div className="h-12" />}>
             <Nav counts={counts} />
           </Suspense>
