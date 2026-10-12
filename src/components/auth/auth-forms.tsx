@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowRight, Eye, EyeOff, Inbox, MailCheck, Users } from "lucide-react";
+import { authClient, authErrorMessage } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
 import { areas } from "@/lib/data/taxonomy";
 import { DEMO_PERSONAS } from "@/lib/data/users";
@@ -53,50 +54,84 @@ function Divider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Where a brand-new account lands once it is signed in. */
+const welcomeUrl = (next: string) => `/welcome?next=${encodeURIComponent(next)}`;
+
+const verifyUrl = (email: string, next: string) => `/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`;
+
+function FormError({ children }: { children?: string }) {
+  if (!children) return null;
+  return (
+    <p role="alert" className="mb-4 rounded-xl bg-coral-50 px-4 py-3 text-sm font-semibold text-coral-700">
+      {children}
+    </p>
+  );
+}
+
+function GoogleButton({ label, next, onError }: { label: string; next: string; onError: (message: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      full
+      size="lg"
+      variant="secondary"
+      iconLeft={<GoogleIcon className="size-5" />}
+      loading={busy}
+      onClick={async () => {
+        setBusy(true);
+        // On success the browser leaves for Google, so the button stays busy.
+        const { error } = await authClient.signIn.social({ provider: "google", callbackURL: next, newUserCallbackURL: welcomeUrl(next), errorCallbackURL: "/login" });
+        if (error) {
+          setBusy(false);
+          onError(authErrorMessage(error));
+        }
+      }}
+    >
+      {label}
+    </Button>
+  );
+}
+
 /* ── Log in ───────────────────────────────────────────────── */
 
 export function LoginForm() {
   const router = useRouter();
+  const sp = useSearchParams();
   const next = useNext("/");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [errs, setErrs] = useState<{ email?: string; pw?: string }>({});
+  // Google sends a failed sign-in back here with ?error=…
+  const [formErr, setFormErr] = useState(sp.get("error") ? "Google sign-in didn't complete. Please try again." : undefined);
   const [busy, setBusy] = useState(false);
   const w = useWorld();
 
-  const finish = (id: string) => {
-    actions.login(id);
-    router.push(next);
-  };
-
   return (
     <div>
-      <Button
-        full
-        size="lg"
-        variant="secondary"
-        iconLeft={<GoogleIcon className="size-5" />}
-        onClick={() => {
-          setBusy(true);
-          setTimeout(() => finish("u_dylan"), 450);
-        }}
-        loading={busy}
-      >
-        Continue with Google
-      </Button>
+      <FormError>{formErr}</FormError>
+      <GoogleButton label="Continue with Google" next={next} onError={setFormErr} />
       <Divider>or with email</Divider>
       <form
         noValidate
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          const next: typeof errs = {};
-          if (!emailOk(email)) next.email = "Enter a valid email address.";
-          if (pw.length < 6) next.pw = "Passwords are at least 6 characters.";
-          setErrs(next);
-          if (Object.keys(next).length) return;
+          const found: typeof errs = {};
+          if (!emailOk(email)) found.email = "Enter a valid email address.";
+          if (!pw) found.pw = "Enter your password.";
+          setErrs(found);
+          setFormErr(undefined);
+          if (Object.keys(found).length) return;
           setBusy(true);
-          const match = w.users.find((u) => u.id.replace("u_", "") === email.split("@")[0].toLowerCase());
-          setTimeout(() => finish(match?.id ?? "u_dylan"), 450);
+          const { data, error } = await authClient.signIn.email({ email: email.trim(), password: pw });
+          if (error) {
+            setBusy(false);
+            // The server has just emailed a fresh confirmation link.
+            if (error.code === "EMAIL_NOT_VERIFIED") return router.push(verifyUrl(email.trim(), next));
+            return setFormErr(authErrorMessage(error));
+          }
+          actions.syncAuth(data.user);
+          toast(`Welcome back, ${data.user.name.split(" ")[0]}`, { tone: "info" });
+          router.push(next);
         }}
         className="space-y-4"
       >
@@ -121,7 +156,15 @@ export function LoginForm() {
             const u = w.userById.get(id);
             if (!u) return null;
             return (
-              <button key={id} type="button" onClick={() => finish(id)} className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 text-left shadow-soft transition hover:shadow-lift">
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  actions.login(id);
+                  router.push(next);
+                }}
+                className="flex items-center gap-2.5 rounded-xl bg-white p-2.5 text-left shadow-soft transition hover:shadow-lift"
+              >
                 <UserAvatar user={u} size="sm" />
                 <span className="min-w-0 text-[0.82rem] font-bold leading-tight text-navy-900">
                   <span className="block truncate">{u.name}</span>
@@ -146,22 +189,17 @@ export function SignupForm() {
   const [pw, setPw] = useState("");
   const [agree, setAgree] = useState(false);
   const [errs, setErrs] = useState<{ name?: string; email?: string; pw?: string; agree?: string }>({});
+  const [formErr, setFormErr] = useState<string>();
   const [busy, setBusy] = useState(false);
-
-  const create = (n: string, e: string) => {
-    actions.signup({ name: n, email: e });
-    router.push(`/verify-email?email=${encodeURIComponent(e)}&next=${encodeURIComponent(next)}`);
-  };
 
   return (
     <div>
-      <Button full size="lg" variant="secondary" iconLeft={<GoogleIcon className="size-5" />} loading={busy} onClick={() => { setBusy(true); setTimeout(() => create("Jamie Lim", "jamie.lim@gmail.com"), 450); }}>
-        Sign up with Google
-      </Button>
+      <FormError>{formErr}</FormError>
+      <GoogleButton label="Sign up with Google" next={next} onError={setFormErr} />
       <Divider>or with email</Divider>
       <form
         noValidate
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           const x: typeof errs = {};
           if (name.trim().length < 2) x.name = "Tell us what to call you.";
@@ -169,9 +207,16 @@ export function SignupForm() {
           if (pw.length < 8) x.pw = "Use at least 8 characters.";
           if (!agree) x.agree = "Please accept the community guidelines to continue.";
           setErrs(x);
+          setFormErr(undefined);
           if (Object.keys(x).length) return;
           setBusy(true);
-          setTimeout(() => create(name.trim(), email.trim()), 450);
+          // No session yet: the account is signed in by the confirmation link in the email.
+          const { error } = await authClient.signUp.email({ name: name.trim(), email: email.trim(), password: pw, callbackURL: welcomeUrl(next) });
+          if (error) {
+            setBusy(false);
+            return setFormErr(authErrorMessage(error));
+          }
+          router.push(verifyUrl(email.trim(), next));
         }}
         className="space-y-4"
       >
@@ -200,6 +245,7 @@ export function SignupForm() {
 export function ForgotForm() {
   const [email, setEmail] = useState("");
   const [err, setErr] = useState<string>();
+  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
 
   if (sent) {
@@ -224,16 +270,66 @@ export function ForgotForm() {
   return (
     <form
       noValidate
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (!emailOk(email)) return setErr("Enter a valid email address.");
+        setBusy(true);
+        const { error } = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: "/reset-password" });
+        setBusy(false);
+        if (error) return setErr(authErrorMessage(error));
         setSent(true);
       }}
       className="space-y-4"
     >
       <TextField label="Email" type="email" autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(undefined); }} error={err} placeholder="you@example.com" />
-      <Button type="submit" size="lg" full>
+      <Button type="submit" size="lg" full loading={busy}>
         Send reset link
+      </Button>
+    </form>
+  );
+}
+
+/* ── Reset password ───────────────────────────────────────── */
+
+export function ResetForm() {
+  const router = useRouter();
+  const sp = useSearchParams();
+  const token = sp.get("token");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState<string>();
+  const [busy, setBusy] = useState(false);
+
+  // The emailed link arrives here with ?token=…, or ?error=… when it has expired or was already used.
+  if (!token || sp.get("error")) {
+    return (
+      <div className="text-center">
+        <p className="text-navy-600">This reset link is invalid or has expired. Links work once, for 1 hour.</p>
+        <Button href="/forgot-password" size="lg" full className="mt-6">
+          Send a new link
+        </Button>
+      </div>
+    );
+  }
+  return (
+    <form
+      noValidate
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (pw.length < 8) return setErr("Use at least 8 characters.");
+        setBusy(true);
+        const { error } = await authClient.resetPassword({ newPassword: pw, token });
+        if (error) {
+          setBusy(false);
+          return setErr(error.code === "INVALID_TOKEN" ? "This reset link has expired. Request a new one." : authErrorMessage(error));
+        }
+        toast("Password updated", { body: "Log in with your new password.", tone: "success" });
+        router.push("/login");
+      }}
+      className="space-y-4"
+    >
+      <PasswordField label="New password" value={pw} onChange={(v) => { setPw(v); setErr(undefined); }} error={err} autoComplete="new-password" hint="At least 8 characters." />
+      <Button type="submit" size="lg" full loading={busy}>
+        Save new password
       </Button>
     </form>
   );
@@ -245,8 +341,15 @@ export function VerifyEmail() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = useNext("/");
-  const email = sp.get("email") ?? "your email";
+  const email = sp.get("email");
   const [cool, setCool] = useState(0);
+  const { data } = authClient.useSession();
+  const verified = !!data?.user.emailVerified;
+
+  // The link in the email signs this browser in. When that happens (often in another tab), move on.
+  useEffect(() => {
+    if (verified) router.replace(welcomeUrl(next));
+  }, [verified, router, next]);
 
   useEffect(() => {
     if (cool <= 0) return;
@@ -261,33 +364,27 @@ export function VerifyEmail() {
       </div>
       <h2 className="mt-6 text-2xl font-extrabold text-navy-900">Verify your email</h2>
       <p className="mx-auto mt-2 max-w-sm text-navy-600">
-        We sent a confirmation link to <strong className="text-navy-900">{email}</strong>. Verified members get a blue tick and are trusted more by the community.
+        We sent a confirmation link to <strong className="text-navy-900">{email ?? "your email"}</strong>. Open it to finish creating your account — the link works for 1 hour.
       </p>
-      <Button
-        size="lg"
-        full
-        className="mt-7"
-        iconRight={<ArrowRight className="size-4" aria-hidden />}
-        onClick={() => {
-          actions.verifyEmail();
-          toast("Email verified", { body: "Welcome to wewillfind.it!", tone: "success" });
-          router.push(`/welcome?next=${encodeURIComponent(next)}`);
-        }}
-      >
-        I&rsquo;ve verified my email
+      <p className="mx-auto mt-3 max-w-sm text-sm text-navy-500">Can&rsquo;t see it? Check your spam folder.</p>
+      {email && (
+        <button
+          type="button"
+          disabled={cool > 0}
+          onClick={async () => {
+            setCool(30);
+            const { error } = await authClient.sendVerificationEmail({ email, callbackURL: welcomeUrl(next) });
+            if (error) toast(authErrorMessage(error), { tone: "error" });
+            else toast("Verification email sent", { tone: "info" });
+          }}
+          className={cn("mt-6 text-sm font-bold", cool > 0 ? "text-navy-400" : "text-coral-700 hover:underline")}
+        >
+          {cool > 0 ? `Resend in ${cool}s` : "Resend email"}
+        </button>
+      )}
+      <Button href="/login" size="lg" full variant="secondary" className="mt-6">
+        Back to log in
       </Button>
-      <p className="mt-2 text-xs text-navy-500">Demo: this button stands in for clicking the link in your email.</p>
-      <button
-        type="button"
-        disabled={cool > 0}
-        onClick={() => {
-          setCool(30);
-          toast("Verification email sent", { tone: "info" });
-        }}
-        className={cn("mt-5 text-sm font-bold", cool > 0 ? "text-navy-400" : "text-coral-700 hover:underline")}
-      >
-        {cool > 0 ? `Resend in ${cool}s` : "Resend email"}
-      </button>
     </div>
   );
 }
@@ -309,6 +406,10 @@ export function WelcomeSetup() {
   const [done, setDone] = useState(false);
   const name = nameEdit ?? me?.name ?? "";
   const hue = hueEdit ?? me?.hue ?? 14;
+  const { data: session, isPending } = authClient.useSession();
+
+  // Arriving from the email link or from Google, the session is known a moment before its profile is.
+  if (isPending || (session && me?.authId !== session.user.id)) return <div className="h-72" />;
 
   if (!me) {
     return (

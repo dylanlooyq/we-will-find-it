@@ -38,6 +38,9 @@ const nextConfig: NextConfig = {
   // its dynamic data (the demo store) on the client by design, so the implicit per-page checks only
   // add noise. (Not applicable — and rejected — when Cache Components is off, i.e. the Pages build.)
   ...(!staticExport && { experimental: { instantInsights: { validationLevel: "manual-warning" as const } } }),
+  // The accounts API is a Cloudflare Worker (worker/), not a Next route. In the deployed site both sit on
+  // one origin; under `npm run dev` this forwards /api to the Worker running locally (`npm run dev:api`).
+  ...(!staticExport && { rewrites: () => [{ source: "/api/:path*", destination: "http://localhost:8787/api/:path*" }] }),
   // Exposed to the browser bundle through src/lib/site.ts
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,

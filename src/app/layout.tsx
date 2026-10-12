@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { AuthSync } from "@/components/auth/auth-sync";
 import { AppEffects } from "@/components/layout/app-effects";
 import { PostChooser } from "@/components/layout/post-chooser";
 import { SITE_URL } from "@/lib/site";
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <PostChooser />
         <AppEffects />
+        <AuthSync />
       </body>
     </html>
   );

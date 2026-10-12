@@ -129,6 +129,8 @@ export interface User {
   suspended?: boolean;
   /** Uploaded avatar (data URL), falls back to initials */
   avatarSrc?: string;
+  /** The real account (accounts API) this profile belongs to. Demo personas don't have one. */
+  authId?: string;
 }
 
 export interface Level {

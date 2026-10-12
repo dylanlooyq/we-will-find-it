@@ -347,9 +347,11 @@ export interface NewItemInput {
   bountyAmount?: number;
 }
 
-export interface SignupInput {
+/** The signed-in account, as the accounts API (worker/auth.ts) reports it. */
+export interface AuthAccount {
+  id: string;
   name: string;
-  email: string;
+  emailVerified: boolean;
 }
 
 export interface ProfilePatch {
@@ -380,27 +382,51 @@ export const actions = {
     toast("You've been logged out", { tone: "info" });
   },
 
-  signup({ name, email }: SignupInput): string {
-    let newId = "";
+  /**
+   * Make the signed-in account the session user, creating its profile the first time it is seen in
+   * this browser. `null` means nobody is really signed in: a profile that belongs to an account is
+   * signed out, while a demo persona is left alone.
+   */
+  syncAuth(account: AuthAccount | null) {
+    const w = getWorld();
+    const current = w.currentUser;
+    if (!account) {
+      if (current?.authId) {
+        commit((d) => {
+          d.sessionUserId = null;
+        });
+      }
+      return;
+    }
+    if (current?.authId === account.id && current.verified === account.emailVerified) return;
+    const existing = w.users.find((u) => u.authId === account.id);
     commit((d, w, ctx) => {
+      if (existing) {
+        const me = userDraft(d, w, existing.id);
+        if (me) me.verified = account.emailVerified;
+        d.sessionUserId = existing.id;
+        return;
+      }
+      const { name } = account;
       const first = slugify(name.split(" ")[0]) || "member";
       let handle = first;
       let n = 2;
       while (w.userByHandle.has(handle) || Object.values(d.users).some((u) => u.handle === handle)) handle = `${first}${n++}`;
       const parts = name.trim().split(/\s+/);
-      const display = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.` : parts[0];
-      newId = `u_${handle}`;
+      const display = parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.` : parts[0] || "Member";
+      const newId = `u_${handle}`;
       let hue = 0;
       for (const ch of name) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
       d.users[newId] = {
         id: newId,
+        authId: account.id,
         handle,
         name: display,
         hue,
         bio: "",
         homeArea: "city",
         memberSince: ctx.nowIso,
-        verified: false,
+        verified: account.emailVerified,
         profileComplete: false,
         rating: 0,
         reviews: 0,
@@ -410,16 +436,7 @@ export const actions = {
         areaPoints: {},
         role: "member",
       };
-      void email;
       d.sessionUserId = newId;
-    });
-    return newId;
-  },
-
-  verifyEmail() {
-    commit((d, w) => {
-      const me = d.sessionUserId && userDraft(d, w, d.sessionUserId);
-      if (me) me.verified = true;
     });
   },
 

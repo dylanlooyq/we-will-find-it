@@ -1,0 +1,12 @@
+# Local settings for the API Worker (`npm run dev:api`). Copy to .dev.vars — that file is not committed.
+
+# Where the site is opened in the browser: http://localhost:3000 with `npm run dev`,
+# or http://localhost:8787 with `npm run preview`.
+SITE_URL=http://localhost:3000
+
+# Any long random string is fine locally.
+BETTER_AUTH_SECRET=local-development-only-secret-0123456789
+
+# Optional: a Google OAuth client with http://localhost:3000/api/auth/callback/google as a redirect URI.
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=

@@ -1,31 +1,62 @@
-// Cloudflare Workers — serves the static export in ./out. No Worker code runs; requests are
-// answered straight from the asset store. Each environment is its own Worker:
+// Cloudflare Workers — serves the static export in ./out, plus a small Worker (worker/) that handles
+// /api/* (sign-in and accounts). Everything else is answered straight from the asset store without
+// running Worker code. Each environment is its own Worker with its own database and secrets:
 //
 //   dev   →  wewillfind-it-dev   →  https://dev.wewillfind.it   (npm run deploy:dev,  `dev` branch)
 //   prod  →  wewillfind-it-prod  →  https://wewillfind.it       (npm run deploy:prod, `main` branch)
 //
 // The site URL is baked into the build, so always deploy through the npm scripts — they build ./out
 // for the matching target first (see scripts/build-static.mjs, which holds the same two URLs).
+//
+// Secrets are set per environment with `wrangler secret put <NAME> --env <dev|prod>`:
+//   BETTER_AUTH_SECRET                        — signs session cookies (required)
+//   GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET   — switches on "Continue with Google"
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "wewillfind-it",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-12",
+  // Better Auth needs AsyncLocalStorage and node:crypto (scrypt password hashing).
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./out",
     // The export writes /route/index.html; "/route" redirects to "/route/".
     "html_handling": "auto-trailing-slash",
     // Unknown URLs get 404.html with a 404 status — StaticHostFallback relies on this.
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    // Only API calls reach the Worker.
+    "run_worker_first": ["/api/*"]
   },
+  "observability": { "enabled": true },
   // Custom domains only: no *.workers.dev copies of the site.
   "workers_dev": false,
   "preview_urls": false,
   "env": {
     "dev": {
-      "routes": [{ "pattern": "dev.wewillfind.it", "custom_domain": true }]
+      "routes": [{ "pattern": "dev.wewillfind.it", "custom_domain": true }],
+      "vars": { "SITE_URL": "https://dev.wewillfind.it" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "wewillfind-it-dev",
+          "database_id": "7b1a0678-c658-4ae6-a409-e6d0f43bc69a",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "secrets": { "required": ["BETTER_AUTH_SECRET"] }
     },
     "prod": {
-      "routes": [{ "pattern": "wewillfind.it", "custom_domain": true }]
+      "routes": [{ "pattern": "wewillfind.it", "custom_domain": true }],
+      "vars": { "SITE_URL": "https://wewillfind.it" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "wewillfind-it-prod",
+          "database_id": "a77d813a-93c7-4dd2-971c-264964538ef6",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "secrets": { "required": ["BETTER_AUTH_SECRET"] }
     }
   }
 }

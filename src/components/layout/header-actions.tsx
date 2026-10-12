@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, ListChecks, LogOut, MessageCircle, RotateCcw, Shield, ShieldCheck, UserRound, Users } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/cn";
 import { DEMO_PERSONAS } from "@/lib/data/users";
 import { useWorld } from "@/lib/store/hooks";
@@ -90,8 +91,9 @@ export function HeaderActions() {
             </MenuLink>
           )}
         </div>
-        <MenuDivider label="Demo accounts" />
-        {DEMO_PERSONAS.filter((id) => id !== me.id).map((id) => {
+        {/* Switching persona is a demo feature: a real account stays itself until it logs out. */}
+        <MenuDivider label={me.authId ? undefined : "Demo accounts"} />
+        {DEMO_PERSONAS.filter((id) => !me.authId && id !== me.id).map((id) => {
           const u = w.userById.get(id);
           if (!u) return null;
           return (
@@ -119,7 +121,8 @@ export function HeaderActions() {
         <MenuButton
           danger
           icon={<LogOut className="size-[1.15rem]" />}
-          onClick={() => {
+          onClick={async () => {
+            if (me.authId) await authClient.signOut();
             actions.logout();
             router.push("/");
           }}
