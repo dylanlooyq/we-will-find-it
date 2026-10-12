@@ -95,6 +95,11 @@ export function getLocation(id: string): Location {
   return locationById[id] ?? locations[0];
 }
 
+/** A well-known place to stand in for an area — its first listed location. */
+export function areaLocation(id: AreaId): Location {
+  return locations.find((l) => l.area === id) ?? locations[0];
+}
+
 export function getCategory(id: CategoryId): Category {
   return categoryById[id] ?? categoryById.other;
 }

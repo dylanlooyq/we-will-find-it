@@ -1,4 +1,5 @@
 import type { Claim, Item, ItemImage, KudosTone, ClaimStatus, ModerationState, PaymentMethod, ReportStatus, ReportTarget } from "../types";
+import { areaLocation } from "../data/taxonomy";
 import { MEMBER_KEY } from "../member-hint";
 import { DEFAULT_NEAR_LOCATION, EMPTY_STATE, buildWorld, type State, type World } from "../world";
 import { emit, toast } from "./events";
@@ -60,12 +61,16 @@ export function getWorld(): World {
 
 /* ── Local copy ───────────────────────────────────────────── */
 
-function nearLocation(): string {
+/** Where distances are measured from: the place picked in this browser, else the member's home area. */
+function nearLocation(s: State): string {
   try {
-    return window.localStorage.getItem(NEAR_KEY) || DEFAULT_NEAR_LOCATION;
+    const picked = window.localStorage.getItem(NEAR_KEY);
+    if (picked) return picked;
   } catch {
-    return DEFAULT_NEAR_LOCATION;
+    /* nothing picked that we can read — fall back to the member's area */
   }
+  const me = s.sessionUserId ? s.users[s.sessionUserId] : undefined;
+  return me ? areaLocation(me.homeArea).id : DEFAULT_NEAR_LOCATION;
 }
 
 /** Start from the copy saved by the last visit, so pages paint with content while the API is asked. */
@@ -112,7 +117,7 @@ function saveCopy() {
 
 /** Rebuild what screens read: the confirmed copy with every unanswered action replayed on top. */
 function rebase() {
-  let next: State = { ...confirmed, nearLocationId: nearLocation() };
+  let next: State = confirmed;
   for (const p of pending) {
     try {
       next = applyAction(next, p.name, p.args as never, { nowMs: Date.now(), nonce: p.nonce, strict: false }).state;
@@ -120,7 +125,7 @@ function rebase() {
       /* no longer applies to the newer copy — the API's answer will settle it */
     }
   }
-  state = next;
+  state = { ...next, nearLocationId: nearLocation(next) };
   notify();
 }
 
@@ -311,7 +316,7 @@ function run<N extends ActionName>(name: N, args: ActionArgs<N>): { result: Acti
     const applied = applyAction(state, name, args, { nowMs: Date.now(), nonce: p.nonce, strict: false });
     pending.push(p);
     savePending();
-    state = applied.state;
+    state = { ...applied.state, nearLocationId: nearLocation(applied.state) };
     notify();
     for (const e of applied.events) emit(e);
     const saved = new Promise<boolean>((resolve) => waiting.set(p.nonce, resolve));
