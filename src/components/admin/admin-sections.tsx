@@ -24,16 +24,14 @@ import { EmptyState } from "../ui/states";
 function Panel({ title, subtitle, toolbar, children }: { title: string; subtitle?: string; toolbar?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section aria-labelledby="admin-h">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 id="admin-h" className="text-3xl font-extrabold text-navy-900">
-            {title}
-          </h1>
-          {subtitle && <p className="mt-1 text-navy-600">{subtitle}</p>}
-        </div>
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h1 id="admin-h" className="text-2xl font-extrabold text-navy-900 sm:text-[1.75rem]">
+          {title}
+        </h1>
+        {subtitle && <p className="text-sm font-semibold text-navy-600">{subtitle}</p>}
       </header>
-      {toolbar && <div className="mt-5">{toolbar}</div>}
-      <div className="mt-5">{children}</div>
+      {toolbar && <div className="mt-4">{toolbar}</div>}
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
@@ -59,7 +57,7 @@ export function AdminOverview() {
     { href: "/admin/users", label: "Suspended users", n: w.users.filter((u) => u.suspended).length, tone: "bg-violet-100 text-violet-700", icon: UserRoundX },
   ];
   return (
-    <Panel title="Needs attention" subtitle="A short list. Everything else is running smoothly.">
+    <Panel title="Needs attention">
       <ul className="grid gap-4 sm:grid-cols-2">
         {cards.map((c) => (
           <li key={c.href}>
@@ -383,7 +381,7 @@ export function BountiesSection() {
     .filter((b) => w.itemById.get(b.itemId))
     .sort((a, b) => flaggedCount(b.id) - flaggedCount(a.id) || claimCount(b.id) - claimCount(a.id) || b.amount - a.amount);
   return (
-    <Panel title="Bounties" subtitle="Review suspicious claims and resolve disputes.">
+    <Panel title="Bounties">
       <ul className="space-y-4">
         {rows.map((b) => {
           const item = w.itemById.get(b.itemId)!;
@@ -432,7 +430,7 @@ export function MatchesAdmin() {
       .sort((a, b) => b.m.score - a.m.score);
   }, [w]);
   return (
-    <Panel title="Matches" subtitle="High-confidence pairs surfaced by the matching service.">
+    <Panel title="Matches">
       {rows.length === 0 ? (
         <EmptyState icon={<Sparkles className="size-9" aria-hidden />} title="No strong matches" body="New pairs show up here as listings arrive." />
       ) : (

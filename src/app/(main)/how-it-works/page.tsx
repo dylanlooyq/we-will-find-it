@@ -5,7 +5,7 @@ import { CtaBand } from "@/components/home/cta-band";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { PostButton } from "@/components/layout/post-chooser";
 import { Button } from "@/components/ui/button";
-import { Container, SectionHeader } from "@/components/ui/section";
+import { Container, PageHeader, SectionHeader } from "@/components/ui/section";
 import { PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 
 export const metadata: Metadata = {
@@ -62,21 +62,23 @@ export default function HowItWorksPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <section className="relative isolate overflow-hidden bg-gradient-to-b from-coral-50 via-white to-canvas">
-        <Container className="py-14 text-center sm:py-20">
-          <p className="eyebrow text-coral-700">How it works</p>
-          <h1 className="mx-auto mt-3 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-navy-900 sm:text-6xl">
-            When someone loses something, <span className="text-coral-600">the community helps find it.</span>
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-navy-600">Post it in under a minute. Singapore does the rest — and when it&rsquo;s found, we make the hand-back safe.</p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <PostButton size="xl">Post Something</PostButton>
-            <Button href="/explore" variant="secondary" size="xl">
+      <Container className="pt-6 sm:pt-8">
+        <PageHeader
+          eyebrow="How it works"
+          title={
+            <>
+              When someone loses something, <span className="text-coral-600">the community helps find it.</span>
+            </>
+          }
+        >
+          <div className="flex gap-2.5">
+            <PostButton>Post Something</PostButton>
+            <Button href="/explore" variant="secondary">
               Explore listings
             </Button>
           </div>
-        </Container>
-      </section>
+        </PageHeader>
+      </Container>
 
       <HowItWorks heading={false} />
 

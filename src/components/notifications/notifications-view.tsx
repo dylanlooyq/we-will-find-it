@@ -8,7 +8,7 @@ import type { NotificationType } from "@/lib/types";
 import { notificationsFor } from "@/lib/world";
 import { Button } from "../ui/button";
 import { Tabs } from "../ui/form";
-import { Container } from "../ui/section";
+import { Container, PageHeader } from "../ui/section";
 import { EmptyState } from "../ui/states";
 import { NotificationItem } from "./notification-item";
 
@@ -41,23 +41,19 @@ export function NotificationsView() {
   }
 
   return (
-    <Container className="max-w-3xl pb-6 pt-8 sm:pt-12">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow text-coral-700">Inbox</p>
-          <h1 className="mt-2 text-3xl font-extrabold text-navy-900 sm:text-4xl">Notifications</h1>
-        </div>
+    <Container className="max-w-3xl pb-6 pt-6 sm:pt-8">
+      <PageHeader eyebrow="Inbox" title="Notifications">
         <Button variant="secondary" size="sm" disabled={unread === 0} onClick={() => actions.markAllNotificationsRead()} iconLeft={<CheckCheck className="size-4" aria-hidden />}>
           Mark all read
         </Button>
-      </header>
+      </PageHeader>
 
       <Tabs<Tab>
         label="Notification categories"
         idPrefix="notif"
         value={tab}
         onChange={setTab}
-        className="mt-6"
+        className="mt-3"
         tabs={[
           { value: "all", label: "All", count: count("all") || undefined },
           { value: "match", label: "Matches", count: count("match") || undefined },

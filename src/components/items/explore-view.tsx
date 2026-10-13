@@ -21,7 +21,7 @@ import { ItemMap } from "../map/item-map";
 import { Button } from "../ui/button";
 import { Chip, ChipLink, Segmented, SearchInput } from "../ui/form";
 import { Overlay } from "../ui/overlay";
-import { Container } from "../ui/section";
+import { Container, PageHeader } from "../ui/section";
 import { EmptyState, ItemCardSkeleton } from "../ui/states";
 import { FilterFields } from "./filter-fields";
 import { ItemCard, ItemRow } from "./item-card";
@@ -29,11 +29,11 @@ import { NearChip } from "./near-chip";
 
 const PRESETS: Record<string, TypeFilter> = { "/lost": "lost", "/found": "found", "/pets": "pets" };
 
-const COPY: Record<TypeFilter, { eyebrow: string; title: string; body: string }> = {
-  all: { eyebrow: "Explore", title: "Lost & found across Singapore", body: "Everything the community has posted — search, filter, or switch to the map." },
-  lost: { eyebrow: "Lost items", title: "Help someone find what they lost", body: "Seen something that matches? Message the owner — and claim any bounty." },
-  found: { eyebrow: "Found items", title: "Found items waiting for their owners", body: "Is one of these yours? Describe it to the finder to claim it." },
-  pets: { eyebrow: "Pets", title: "Lost & found pets", body: "Every share helps. Spotted a pet that looks like one of these? Reach out right away." },
+const COPY: Record<TypeFilter, { eyebrow: string; title: string }> = {
+  all: { eyebrow: "Explore", title: "Lost & found across Singapore" },
+  lost: { eyebrow: "Lost items", title: "Help someone find what they lost" },
+  found: { eyebrow: "Found items", title: "Found items waiting for their owners" },
+  pets: { eyebrow: "Pets", title: "Lost & found pets" },
 };
 
 const PAGE = 12;
@@ -161,29 +161,27 @@ export function ExploreView({ forceView }: { forceView?: "list" | "map" }) {
     ) : null;
 
   return (
-    <Container className="pb-6 pt-8 sm:pt-12">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow text-coral-700">{copy.eyebrow}</p>
-          <h1 className="mt-2 text-3xl font-extrabold leading-tight text-navy-900 sm:text-4xl">{copy.title}</h1>
-          <p className="mt-2 max-w-xl text-[0.98rem] text-navy-600">{copy.body}</p>
-        </div>
+    <Container className="pb-6 pt-6 sm:pt-8">
+      <PageHeader eyebrow={copy.eyebrow} title={copy.title} />
+
+      {/* Search and the list/map switch share a line; on a phone the switch shrinks to its icons. */}
+      <div className="mt-4 flex items-center gap-2.5 sm:gap-3">
+        <SearchInput value={q} onChange={setTyped} className="min-w-0 flex-1" />
         {!forceView && (
           <Segmented<"list" | "map">
             label="Layout"
             value={view}
             onChange={(v) => push(filters, v)}
+            className="shrink-0"
             options={[
-              { value: "list", label: "List", icon: <List className="size-4" aria-hidden /> },
-              { value: "map", label: "Map", icon: <MapIcon className="size-4" aria-hidden /> },
+              { value: "list", label: <span className="max-sm:sr-only">List</span>, icon: <List className="size-4" aria-hidden /> },
+              { value: "map", label: <span className="max-sm:sr-only">Map</span>, icon: <MapIcon className="size-4" aria-hidden /> },
             ]}
           />
         )}
-      </header>
+      </div>
 
-      <SearchInput value={q} onChange={setTyped} className="mt-6" />
-
-      <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         <ChipLink href={`/explore${carry}`} active={preset === "all"} count={counts.all}>
           All
         </ChipLink>
@@ -229,7 +227,7 @@ export function ExploreView({ forceView }: { forceView?: "list" | "map" }) {
         </ul>
       )}
 
-      <p className="mt-5 text-sm font-semibold text-navy-600" aria-live="polite">
+      <p className="mt-4 text-sm font-semibold text-navy-600" aria-live="polite">
         {results.length} {results.length === 1 ? "listing" : "listings"}
         {q && <> for “{q}”</>}
       </p>

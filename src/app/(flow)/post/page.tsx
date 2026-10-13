@@ -3,6 +3,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { PostOptions } from "@/components/layout/post-chooser";
+import { PageHeader } from "@/components/ui/section";
 
 export const metadata: Metadata = {
   title: "Post something",
@@ -21,11 +22,9 @@ export default function PostPage() {
           <X className="size-6" />
         </Link>
       </header>
-      <div className="mx-auto max-w-3xl px-4 pb-16 pt-8 sm:pt-14">
-        <p className="eyebrow text-coral-700">New post</p>
-        <h1 className="mt-2 text-3xl font-extrabold text-navy-900 sm:text-5xl">What are you posting?</h1>
-        <p className="mt-3 text-lg text-navy-600">It takes under a minute. We&rsquo;ll start looking for matches straight away.</p>
-        <div className="mt-9">
+      <div className="mx-auto max-w-3xl px-4 pb-16 pt-6 sm:pt-8">
+        <PageHeader eyebrow="New post" title="What are you posting?" />
+        <div className="mt-5">
           <PostOptions large />
         </div>
       </div>

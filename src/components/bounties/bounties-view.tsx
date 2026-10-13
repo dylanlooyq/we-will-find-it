@@ -112,14 +112,12 @@ function BountyHeader({ count, total }: { count: number; total: number }) {
 function Section({
   title,
   eyebrow,
-  body,
   entries,
   nowMs,
   showDistance,
 }: {
   title: string;
   eyebrow: string;
-  body: string;
   entries: { item: import("@/lib/types").Item; bounty: import("@/lib/types").Bounty; km: number }[];
   nowMs: number;
   showDistance?: boolean;
@@ -128,9 +126,9 @@ function Section({
   if (entries.length === 0) return null;
   const list = all ? entries : entries.slice(0, 4);
   return (
-    <Container as="section" className="pt-14 sm:pt-16">
-      <SectionHeader eyebrow={eyebrow} title={title} body={body} action={entries.length > 4 ? <Button variant="ghost" size="sm" onClick={() => setAll((a) => !a)}>{all ? "Show less" : `See all ${entries.length}`}</Button> : null} />
-      <div className="mt-6">
+    <Container as="section" className="pt-10 sm:pt-12">
+      <SectionHeader className="[&_h2]:text-2xl" eyebrow={eyebrow} title={title} action={entries.length > 4 ? <Button variant="ghost" size="sm" onClick={() => setAll((a) => !a)}>{all ? "Show less" : `See all ${entries.length}`}</Button> : null} />
+      <div className="mt-5">
         <Rail className={all ? "lg:grid-cols-4 flex-wrap" : undefined}>
           {list.map(({ item, bounty, km }) => (
             <RailItem key={bounty.id}>
@@ -198,10 +196,10 @@ export function BountiesView() {
         </Container>
       ) : (
         <>
-          <Section eyebrow="Biggest rewards" title="Highest Bounties" body="The rewards worth getting out of bed for." entries={highest} nowMs={now} />
-          <Section eyebrow={`Near ${near.name}`} title="Nearby Bounties" body="Close enough to check on your way home." entries={nearby} nowMs={now} showDistance />
-          <Section eyebrow="Just posted" title="Recently Added" body="Fresh bounties — be the first to spot them." entries={recent} nowMs={now} />
-          <Section eyebrow="Running out of time" title="Ending Soon" body="These rewards expire in the next few days." entries={ending.filter((e) => Date.parse(e.bounty.expiresAt) - now < 14 * 86_400_000)} nowMs={now} />
+          <Section eyebrow="Biggest rewards" title="Highest Bounties" entries={highest} nowMs={now} />
+          <Section eyebrow={`Near ${near.name}`} title="Nearby Bounties" entries={nearby} nowMs={now} showDistance />
+          <Section eyebrow="Just posted" title="Recently Added" entries={recent} nowMs={now} />
+          <Section eyebrow="Running out of time" title="Ending Soon" entries={ending.filter((e) => Date.parse(e.bounty.expiresAt) - now < 14 * 86_400_000)} nowMs={now} />
         </>
       )}
 

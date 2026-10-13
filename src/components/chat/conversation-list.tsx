@@ -39,9 +39,9 @@ export function ConversationList({ activeId }: { activeId: string | null }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-line px-5 pb-3 pt-5">
+      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
         <h1 className="text-2xl font-extrabold text-navy-900">Messages</h1>
-        <div className="mt-3 flex gap-2">
+        <div className="flex gap-2">
           <Chip active={!unreadOnly} onClick={() => setUnreadOnly(false)} className="!h-9">
             All
           </Chip>

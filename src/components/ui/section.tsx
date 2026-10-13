@@ -7,6 +7,24 @@ export function Container({ children, className, as: Tag = "div" }: { children: 
   return <Tag className={cn("mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8", className)}>{children}</Tag>;
 }
 
+/**
+ * The top of a page, kept to one line: a small label, the title, and the page's own controls beside
+ * them (`children`). No strapline — the page should explain itself.
+ */
+export function PageHeader({ eyebrow, title, children, className, id }: { eyebrow?: ReactNode; title: ReactNode; children?: ReactNode; className?: string; id?: string }) {
+  return (
+    <header className={cn("flex flex-wrap items-center justify-between gap-x-4 gap-y-3", className)}>
+      <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+        {eyebrow && <p className="eyebrow flex items-center gap-1.5 text-coral-700">{eyebrow}</p>}
+        <h1 id={id} className="text-2xl font-extrabold leading-tight text-navy-900 sm:text-[1.75rem]">
+          {title}
+        </h1>
+      </div>
+      {children}
+    </header>
+  );
+}
+
 export function SectionHeader({
   eyebrow,
   title,
@@ -28,9 +46,12 @@ export function SectionHeader({
 }) {
   return (
     <div className={cn("flex items-end justify-between gap-4", className)}>
-      <div>
-        {eyebrow && <p className={cn("eyebrow mb-2", tone === "light" ? "text-gold-300" : "text-coral-700")}>{eyebrow}</p>}
-        <h2 className={cn("text-[1.65rem] font-extrabold leading-tight sm:text-3xl", tone === "light" ? "text-white" : "text-navy-900")}>{title}</h2>
+      <div className="min-w-0">
+        {/* The small label sits on the title's line, not above it. */}
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {eyebrow && <p className={cn("eyebrow", tone === "light" ? "text-gold-300" : "text-coral-700")}>{eyebrow}</p>}
+          <h2 className={cn("text-[1.65rem] font-extrabold leading-tight sm:text-3xl", tone === "light" ? "text-white" : "text-navy-900")}>{title}</h2>
+        </div>
         {body && <p className={cn("mt-2 max-w-xl text-[0.98rem] leading-relaxed", tone === "light" ? "text-white/75" : "text-navy-600")}>{body}</p>}
       </div>
       {action}
