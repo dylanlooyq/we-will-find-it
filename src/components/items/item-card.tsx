@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, MapPin, MessageCircle, PawPrint, Navigation } from "lucide-react";
+import { CalendarDays, MapPin, PawPrint, Navigation } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { getLocation } from "@/lib/data/taxonomy";
 import { formatDistance } from "@/lib/geo";
@@ -23,8 +23,8 @@ type Props = {
 
 /**
  * The listing card. The whole card is one link (stretched ::after on the
- * title) while the like button floats above it — no nested interactive
- * elements, full keyboard and screen-reader support.
+ * title) while the like button floats above it, on the photo — no nested
+ * interactive elements, full keyboard and screen-reader support.
  */
 export function ItemCard({ item, bountyAmount, distanceKm, priority, className, titleAs: Title = "h3" }: Props) {
   const loc = getLocation(item.locationId);
@@ -45,21 +45,29 @@ export function ItemCard({ item, bountyAmount, distanceKm, priority, className, 
           image={cover}
           category={item.category}
           priority={priority}
+          captionRightSpace
           className="aspect-[4/3] [&>img]:transition-transform [&>img]:duration-500 group-hover:[&>img]:scale-105"
         />
         <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
           <StatusBadge type={item.type} pet={!!pet} resolved={resolved} />
           {bountyAmount ? <BountyBadge amount={bountyAmount} /> : null}
         </div>
+        {/* Above the card-wide link, so it can be pressed on its own. */}
+        <div className="absolute bottom-3 right-3 z-10">
+          <LikeButton itemId={item.id} tone="glass" />
+        </div>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div>
-          <Title className="text-[1.05rem] font-extrabold leading-snug text-navy-900">
-            <Link href={`/item/${item.slug}`} className="after:absolute after:inset-0 after:content-[''] focus-visible:after:rounded-card">
-              {pet && item.pet?.name ? item.pet.name : item.title}
-            </Link>
-          </Title>
+          <div className="flex items-baseline justify-between gap-3">
+            <Title className="min-w-0 text-[1.05rem] font-extrabold leading-snug text-navy-900">
+              <Link href={`/item/${item.slug}`} className="after:absolute after:inset-0 after:content-[''] focus-visible:after:rounded-card">
+                {pet && item.pet?.name ? item.pet.name : item.title}
+              </Link>
+            </Title>
+            <RelativeTime iso={item.postedAt} className="shrink-0 whitespace-nowrap text-xs font-medium text-navy-400" />
+          </div>
           {pet && (
             <p className="mt-0.5 text-sm font-semibold text-navy-600">
               {[item.pet?.colour, item.pet?.breed].filter(Boolean).join(" ")}
@@ -94,15 +102,6 @@ export function ItemCard({ item, bountyAmount, distanceKm, priority, className, 
         </ul>
 
         <p className="line-clamp-2 text-sm leading-relaxed text-navy-500">{item.description}</p>
-
-        <div className="mt-auto flex items-center gap-4 border-t border-line/70 pt-3 text-sm text-navy-500">
-          <LikeButton itemId={item.id} />
-          <span className="inline-flex items-center gap-1.5 font-semibold" aria-label={`${item.comments} comments`}>
-            <MessageCircle className="size-[1.05rem]" aria-hidden />
-            <span className="tabular-nums">{item.comments}</span>
-          </span>
-          <RelativeTime iso={item.postedAt} className="ml-auto text-xs font-medium text-navy-400" />
-        </div>
       </div>
     </article>
   );

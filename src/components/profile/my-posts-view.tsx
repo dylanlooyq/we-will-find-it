@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Bookmark, Coins, ListChecks, MessageCircle, PartyPopper, Pencil, Plus } from "lucide-react";
+import { Bookmark, Coins, ListChecks, PartyPopper, Pencil, Plus } from "lucide-react";
 import { useWorld } from "@/lib/store/hooks";
 import { actions } from "@/lib/store/store";
 import { activePublicItems, bountyForItem, bountyOnOffer, claimsForItem, itemsByOwner } from "@/lib/world";
@@ -13,7 +13,7 @@ import { PostButton } from "../layout/post-chooser";
 import { Pill } from "../ui/badges";
 import { Button } from "../ui/button";
 import { Tabs } from "../ui/form";
-import { Container } from "../ui/section";
+import { Container, PageHeader } from "../ui/section";
 import { EmptyState } from "../ui/states";
 
 type Tab = "active" | "resolved" | "saved";
@@ -40,21 +40,17 @@ export function MyPostsView() {
   const list = tab === "active" ? active : tab === "resolved" ? resolved : saved;
 
   return (
-    <Container className="max-w-3xl pb-6 pt-8 sm:pt-12">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow text-coral-700">Your listings</p>
-          <h1 className="mt-2 text-3xl font-extrabold text-navy-900 sm:text-4xl">My Posts</h1>
-        </div>
+    <Container className="max-w-3xl pb-6 pt-6 sm:pt-8">
+      <PageHeader eyebrow="Your listings" title="My Posts">
         <PostButton size="sm">New post</PostButton>
-      </header>
+      </PageHeader>
 
       <Tabs<Tab>
         label="Post status"
         idPrefix="mine"
         value={tab}
         onChange={setTab}
-        className="mt-6"
+        className="mt-3"
         tabs={[
           { value: "active", label: "Active", count: active.length },
           { value: "resolved", label: "Resolved", count: resolved.length },
@@ -84,16 +80,11 @@ export function MyPostsView() {
                     titleAs="h2"
                     bountyAmount={bountyOnOffer(b) ? b.amount : undefined}
                     note={
-                      <span className="flex flex-wrap items-center gap-2 text-navy-500">
-                        <span className="inline-flex items-center gap-1">
-                          <MessageCircle className="size-3.5" aria-hidden /> {item.comments}
-                        </span>
-                        {claims.length > 0 && own && (
-                          <Pill tone="gold">
-                            <Coins className="size-3" aria-hidden /> {claims.length} claim{claims.length > 1 ? "s" : ""} to review
-                          </Pill>
-                        )}
-                      </span>
+                      claims.length > 0 && own ? (
+                        <Pill tone="gold">
+                          <Coins className="size-3" aria-hidden /> {claims.length} claim{claims.length > 1 ? "s" : ""} to review
+                        </Pill>
+                      ) : undefined
                     }
                     trailing={
                       own && item.status === "active" ? (
