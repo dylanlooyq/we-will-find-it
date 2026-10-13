@@ -84,6 +84,9 @@
   --color-canvas: #f6f7fb;
   --color-line: #e6e9f2;
   --color-sky: #e8f1ff;
+  --color-sky-deep: #cfe0f7;
+  /* The warm wash behind the home page's first screen */
+  --color-blush: #fff4f0;
 
   --radius-card: 1.25rem;
   --radius-sheet: 1.75rem;
@@ -205,6 +208,149 @@ h1, h2, h3, h4 {
   outline-color: #fff;
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Dark mode — <html data-theme="dark">, set before first paint (src/lib/theme.ts).
+
+   Components keep their one set of classes; here the tokens themselves change. Surfaces
+   (white, canvas, the 50–200 tints) go dark, ink (the navy scale, the 700–900 tints) goes
+   light — so "bg-white text-navy-900" and "bg-navy-900 text-white" both simply invert.
+
+   What must NOT invert is anything drawn on a saturated fill: a coral button, a gold badge.
+   Those elements, and everything inside them, get the light tokens back (the second block).
+   ────────────────────────────────────────────────────────────── */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --color-white: #151d38;
+  --color-canvas: #0a1022;
+  --color-line: #27325a;
+  --color-sky: #17264a;
+  --color-sky-deep: #1d3160;
+  --color-blush: #1b1530;
+  --color-navy-50: #111930;
+  --color-navy-100: #1d2748;
+  --color-navy-200: #2c3963;
+  --color-navy-300: #4a5885;
+  --color-navy-400: #909dbf;
+  --color-navy-500: #9ca8c8;
+  --color-navy-600: #adb8d4;
+  --color-navy-700: #c8d0e6;
+  --color-navy-800: #e0e6f4;
+  --color-navy-900: #f2f5fb;
+  --color-navy-950: #ffffff;
+  --color-coral-50: #2b1422;
+  --color-coral-100: #3c1929;
+  --color-coral-200: #5c2238;
+  --color-coral-700: #ff8ea3;
+  --color-coral-800: #ffb1bf;
+  --color-coral-900: #ffd6dd;
+  --color-found-50: #141f45;
+  --color-found-100: #1b2b5e;
+  --color-found-200: #263b80;
+  --color-found-700: #9fb5ff;
+  --color-found-800: #bdcbff;
+  --color-found-900: #dbe3ff;
+  --color-gold-50: #292010;
+  --color-gold-100: #392b12;
+  --color-gold-200: #594216;
+  --color-gold-600: #fbbf24;
+  --color-gold-700: #fcd34d;
+  --color-gold-800: #fde68a;
+  --color-gold-900: #fef3c7;
+  --color-mint-50: #0e281f;
+  --color-mint-100: #123628;
+  --color-mint-200: #194e38;
+  --color-mint-700: #6ee7b0;
+  --color-mint-800: #a2efc6;
+  --color-mint-900: #d0f7e0;
+  --color-violet-50: #1e193c;
+  --color-violet-100: #292051;
+  --color-violet-200: #3a2c72;
+  --color-violet-600: #b594ff;
+  --color-violet-700: #c5a8ff;
+  --color-violet-800: #dbc9ff;
+}
+
+html[data-theme="dark"] :is(
+  .theme-light,
+  .bg-coral-500, .bg-coral-600, .bg-found-600, .bg-mint-300, .bg-mint-600, .bg-mint-700, .bg-gold-300, .bg-gold-500,
+  [class*="from-coral-4"], [class*="from-coral-5"], [class*="from-coral-6"], [class*="from-violet-4"],
+  [class*="from-gold-3"], [class*="to-gold-3"], [class*="from-mint-4"], [class*="from-found-4"],
+  /* see-through navy labels laid over photos */
+  [class*="bg-navy-900/"], [class*="bg-navy-950/"]
+) {
+  color-scheme: light;
+  --color-white: #fff;
+  --color-canvas: #f6f7fb;
+  --color-line: #e6e9f2;
+  --color-sky: #e8f1ff;
+  --color-sky-deep: #cfe0f7;
+  --color-blush: #fff4f0;
+  --color-navy-50: #f4f6fb;
+  --color-navy-100: #e9edf6;
+  --color-navy-200: #d6dcec;
+  --color-navy-300: #b3bdd6;
+  --color-navy-400: #5f6b86;
+  --color-navy-500: #56627f;
+  --color-navy-600: #4b5877;
+  --color-navy-700: #2f3b60;
+  --color-navy-800: #1a2850;
+  --color-navy-900: #0e1a3a;
+  --color-navy-950: #080f26;
+  --color-coral-50: #fff1f3;
+  --color-coral-100: #ffe3e8;
+  --color-coral-200: #ffc9d3;
+  --color-coral-700: #be123c;
+  --color-coral-800: #9f1239;
+  --color-coral-900: #4c0519;
+  --color-found-50: #eef3ff;
+  --color-found-100: #dfe8ff;
+  --color-found-200: #c3d3ff;
+  --color-found-700: #2341b3;
+  --color-found-800: #1f3791;
+  --color-found-900: #1b2f72;
+  --color-gold-50: #fffbeb;
+  --color-gold-100: #fef3c7;
+  --color-gold-200: #fde68a;
+  --color-gold-600: #d97706;
+  --color-gold-700: #b45309;
+  --color-gold-800: #92400e;
+  --color-gold-900: #78350f;
+  --color-mint-50: #ecfdf3;
+  --color-mint-100: #d3f8e2;
+  --color-mint-200: #a8f0c7;
+  --color-mint-700: #0f7a4b;
+  --color-mint-800: #0f6040;
+  --color-mint-900: #0c4a33;
+  --color-violet-50: #f6f1ff;
+  --color-violet-100: #ece2ff;
+  --color-violet-200: #dac8ff;
+  --color-violet-600: #7a3fe8;
+  --color-violet-700: #6a2fd0;
+  --color-violet-800: #5626a8;
+}
+
+/* White text is always on a fill or a photo, so it stays white — except on the navy fills that have
+   just turned light (the selected chip, the dark button), where it has to turn dark with them. */
+html[data-theme="dark"] [class*="text-white"]:not(.bg-navy-800, .bg-navy-900, .bg-navy-950, [class*=":text-white"]) {
+  color: #fff;
+}
+html[data-theme="dark"] :is([class*="text-white/7"], [class*="text-white/8"]) {
+  color: rgb(255 255 255 / 0.8);
+}
+
+/* Full-width navy bands stay dark rather than turning into a bright stripe. */
+html[data-theme="dark"] .dark-band {
+  background-color: #060a17;
+  color: #fff;
+}
+html[data-theme="dark"] .dark-band [class*="bg-white/"] {
+  background-color: rgb(255 255 255 / 0.08);
+}
+
+html[data-theme="dark"] .wwf-tiles {
+  filter: invert(1) hue-rotate(180deg) saturate(0.5) brightness(0.95) contrast(0.9);
+}
+
 /* Members skip the blocks written for visitors, and the other way round. <html data-member> is set
    before first paint (src/lib/member-hint.ts), so neither version flashes while the page hydrates. */
 html[data-member] [data-landing],
@@ -221,12 +367,12 @@ html:not([data-member]) [data-member-only] {
   padding-bottom: calc(var(--safe-bottom) + 0.75rem);
 }
 @utility skeleton {
-  background: linear-gradient(100deg, var(--color-navy-100) 30%, #fff 50%, var(--color-navy-100) 70%);
+  background: linear-gradient(100deg, var(--color-navy-100) 30%, var(--color-white) 50%, var(--color-navy-100) 70%);
   background-size: 200% 100%;
   animation: var(--animate-shimmer);
 }
 @utility glass {
-  background: rgb(255 255 255 / 0.96);
+  background: color-mix(in srgb, var(--color-white) 96%, transparent);
   backdrop-filter: saturate(180%) blur(18px);
   -webkit-backdrop-filter: saturate(180%) blur(18px);
 }
@@ -259,7 +405,7 @@ dialog.overlay::backdrop {
 }
 .leaflet-container {
   font-family: var(--font-sans);
-  background: #e8eef9;
+  background: var(--color-sky);
   outline: none;
 }
 .leaflet-div-icon {

@@ -35,7 +35,7 @@ export function MemberHome({ me }: { me: User }) {
 
   return (
     <>
-      <section className="border-b border-line/70 bg-gradient-to-b from-[#fff4f0] to-canvas" aria-labelledby="home-h">
+      <section className="border-b border-line/70 bg-gradient-to-b from-blush to-canvas" aria-labelledby="home-h">
         <Container className="pb-7 pt-6 sm:pb-9 sm:pt-9">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 id="home-h" className="text-2xl font-extrabold text-navy-900 sm:text-3xl">

@@ -45,7 +45,7 @@ export function ChatBubble({
     const loc = getLocation(message.locationId);
     body = (
       <div className={cn("w-64 max-w-full overflow-hidden", mine ? "rounded-2xl rounded-br-md bg-coral-600 text-white" : "rounded-2xl rounded-bl-md bg-white text-navy-900 shadow-soft ring-1 ring-line/70")}>
-        <div className="relative h-24 bg-gradient-to-br from-sky to-[#cfe0f7]">
+        <div className="relative h-24 bg-gradient-to-br from-sky to-sky-deep">
           <div aria-hidden className="absolute inset-0 opacity-40" style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
           <span className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-[60%] items-center justify-center rounded-full bg-coral-600 text-white shadow-lift ring-4 ring-white">
             <MapPin className="size-5" aria-hidden />

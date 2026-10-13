@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Ban, EyeOff, Flag, Landmark, Lock, PawPrint, ShieldCheck, UserCheck, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Container } from "@/components/ui/section";
+import { Container, PageHeader } from "@/components/ui/section";
 import { PAYMENT_OPTIONS } from "@/lib/data/taxonomy";
 
 export const metadata: Metadata = {
@@ -32,17 +32,18 @@ const FLAGS = [
 export default function SafetyPage() {
   return (
     <>
-      <section className="bg-gradient-to-b from-mint-50 via-white to-canvas">
-        <Container className="py-14 sm:py-20">
-          <span className="flex size-16 items-center justify-center rounded-3xl bg-mint-600 text-white shadow-lift">
-            <ShieldCheck className="size-8" aria-hidden />
-          </span>
-          <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight text-navy-900 sm:text-6xl">Safety &amp; trust</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-navy-600">Most people are kind. These simple habits keep it that way — for you, for finders and for the whole community.</p>
-        </Container>
-      </section>
+      <Container className="pt-6 sm:pt-8">
+        <PageHeader
+          eyebrow={
+            <>
+              <ShieldCheck className="size-4" aria-hidden /> Staying safe
+            </>
+          }
+          title="Safety & trust"
+        />
+      </Container>
 
-      <Container as="section" className="pt-4">
+      <Container as="section" className="pt-5">
         <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {TIPS.map((t) => (
             <li key={t.title} className="rounded-card bg-white p-6 shadow-soft">
@@ -86,7 +87,7 @@ export default function SafetyPage() {
       </Container>
 
       <Container as="section" className="pt-12">
-        <div className="flex flex-col items-start justify-between gap-4 rounded-card bg-navy-900 p-7 text-white sm:flex-row sm:items-center sm:p-9">
+        <div className="flex flex-col items-start justify-between gap-4 dark-band rounded-card bg-navy-900 p-7 text-white sm:flex-row sm:items-center sm:p-9">
           <div>
             <p className="text-xl font-extrabold">Found something sensitive?</p>
             <p className="mt-1 max-w-xl text-white/75">Passports, NRIC cards and bank cards are best handed to the nearest police post or MRT customer service counter.</p>

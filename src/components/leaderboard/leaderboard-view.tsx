@@ -10,21 +10,20 @@ import { POINTS_RULES } from "@/lib/levels";
 import { useWorld } from "@/lib/store/hooks";
 import type { AreaId, User } from "@/lib/types";
 import { leaderboard, type LeaderboardPeriod } from "@/lib/world";
-import { SkylineArt } from "../home/hero-art";
 import { PointsBadge, UserLevel } from "../community/level";
 import { PostButton } from "../layout/post-chooser";
 import { UserAvatar } from "../ui/avatar";
 import { Chip, Segmented, Tabs } from "../ui/form";
-import { Container } from "../ui/section";
+import { Container, PageHeader } from "../ui/section";
 import { AreaMap, type AreaLeader } from "./sg-map";
 import { LeaderboardRow, RankMedal } from "./leaderboard-row";
 
 type TabId = "season" | "month" | "allTime";
 
-const TAB_COPY: Record<TabId, { label: string; title: string; body: string }> = {
-  season: { label: "Singapore", title: "Top Finders in Singapore", body: "Recognising the amazing people who help reunite lost items with their owners — this season (Oct–Dec 2026)." },
-  month: { label: "This Month", title: "This month's top finders", body: "Fresh start every month. Who's been out there helping the most in October?" },
-  allTime: { label: "All Time", title: "Hall of fame", body: "Every point ever earned. These are Singapore's most dependable finders." },
+const TAB_COPY: Record<TabId, { label: string; title: string }> = {
+  season: { label: "Singapore", title: "Top Finders in Singapore" },
+  month: { label: "This Month", title: "This month's top finders" },
+  allTime: { label: "All Time", title: "Hall of fame" },
 };
 
 function Podium({ top, period, meId }: { top: User[]; period: LeaderboardPeriod; meId?: string }) {
@@ -34,7 +33,7 @@ function Podium({ top, period, meId }: { top: User[]; period: LeaderboardPeriod;
   const plinth = [
     "from-navy-100 to-navy-200",
     "from-gold-200 to-gold-300",
-    "from-[#f6dcc3] to-[#ecbf93]",
+    "theme-light from-[#f6dcc3] to-[#ecbf93]",
   ];
   return (
     <ol className="grid grid-cols-3 items-end gap-2 sm:gap-5" aria-label="Top three finders">
@@ -103,28 +102,27 @@ export function LeaderboardView() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-gradient-to-b from-gold-50 via-coral-50/60 to-canvas">
-        <div aria-hidden className="absolute inset-y-0 right-0 -z-10 hidden w-1/2 opacity-50 [mask-image:linear-gradient(to_left,black_25%,transparent)] lg:block">
-          <SkylineArt />
-        </div>
-        <Container className="pb-10 pt-10 sm:pb-14 sm:pt-14">
-          <p className="eyebrow flex items-center gap-2 text-coral-700">
-            <Trophy className="size-4" aria-hidden /> Leaderboard
-          </p>
-          <h1 className="mt-3 max-w-2xl text-4xl font-extrabold leading-tight text-navy-900 sm:text-5xl">{copy.title}</h1>
-          <p className="mt-3 max-w-xl text-[1.02rem] leading-relaxed text-navy-600">{copy.body}</p>
+      <Container className="pb-6 pt-6 sm:pt-8">
+        <PageHeader
+          eyebrow={
+            <>
+              <Trophy className="size-4" aria-hidden /> Leaderboard
+            </>
+          }
+          title={copy.title}
+        >
           <Tabs<TabId>
             label="Leaderboard period"
             idPrefix="lb"
             value={tab}
             onChange={setTab}
-            className="mt-8 max-w-lg rounded-2xl border-0 bg-white/80 p-1 shadow-soft backdrop-blur [&>button]:h-11 [&>button]:rounded-xl [&>button>span:last-child]:hidden [&>button[aria-selected=true]]:bg-navy-900 [&>button[aria-selected=true]]:text-white"
+            className="w-full max-w-md rounded-2xl border-0 bg-white p-1 shadow-soft sm:w-auto sm:min-w-[22rem] [&>button]:h-10 [&>button]:rounded-xl [&>button>span:last-child]:hidden [&>button[aria-selected=true]]:bg-navy-900 [&>button[aria-selected=true]]:text-white"
             tabs={(Object.keys(TAB_COPY) as TabId[]).map((k) => ({ value: k, label: TAB_COPY[k].label }))}
           />
-        </Container>
-      </section>
+        </PageHeader>
+      </Container>
 
-      <Container className="-mt-2 grid gap-8 pb-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <Container className="grid gap-8 pb-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div id={`lb-panel-${tab}`} role="tabpanel" aria-labelledby={`lb-${tab}`} className="min-w-0">
           {top3.length === 3 && <Podium top={top3} period={tab} meId={me?.id} />}
 
@@ -181,16 +179,15 @@ export function LeaderboardView() {
 
       {/* ── By area ─────────────────────────────────────────── */}
       <Container as="section" className="pt-14 sm:pt-20">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="eyebrow text-coral-700">Neighbourhoods</p>
-            <h2 className="mt-2 text-3xl font-extrabold text-navy-900">Top Finders by Area</h2>
-            <p className="mt-2 max-w-xl text-navy-600">See which neighbourhoods have the most helpful finders this month. The top finder in each area earns <strong className="text-navy-900">+50 points</strong>.</p>
+            <h2 className="text-2xl font-extrabold text-navy-900">Top Finders by Area</h2>
           </div>
           <Segmented<"map" | "list"> label="Area view" value={areaView} onChange={setAreaView} options={[{ value: "map", label: "Map view" }, { value: "list", label: "Area list" }]} />
         </div>
 
-        <div className="mt-7 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div>
             {areaView === "map" ? (
               <AreaMap leaders={leaders} selected={areaId} onSelect={setAreaId} meId={me?.id} />

@@ -14,6 +14,7 @@ import { UserAvatar } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { DropdownMenu, MenuButton, MenuDivider, MenuLink } from "../ui/dropdown";
 import { PostButton } from "./post-chooser";
+import { ThemeToggle } from "./theme-toggle";
 
 function CountDot({ n }: { n: number }) {
   if (n <= 0) return null;
@@ -35,6 +36,7 @@ export function HeaderActions() {
   if (!me) {
     return (
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <Button href="/login" variant="ghost" size="sm" className="max-sm:hidden">
           Log in
         </Button>
@@ -51,6 +53,7 @@ export function HeaderActions() {
   return (
     <div className="flex items-center gap-1.5 sm:gap-2">
       <PostButton size="sm" className="max-lg:hidden" />
+      <ThemeToggle />
       <Link href="/messages" aria-label="Messages" className={cn(iconBtn, "max-sm:hidden")}>
         <MessageCircle className="size-[1.4rem]" aria-hidden />
         <CountDot n={unreadChats} />

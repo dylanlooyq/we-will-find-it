@@ -12,7 +12,7 @@ import { Search } from "lucide-react";
 /** "Lost something? Found something? We will find it." */
 export function Hero() {
   return (
-    <section className="relative isolate overflow-hidden bg-gradient-to-b from-[#fff1ea] via-[#fff6f6] to-canvas">
+    <section className="relative isolate overflow-hidden bg-gradient-to-b from-blush via-blush/50 to-canvas">
       <div aria-hidden className="absolute -left-24 top-10 -z-10 size-[26rem] rounded-full bg-coral-200/50 blur-3xl" />
       <div aria-hidden className="absolute -right-32 top-32 -z-10 size-[30rem] rounded-full bg-violet-200/50 blur-3xl" />
 

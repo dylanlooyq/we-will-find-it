@@ -65,7 +65,7 @@ export function NearbyBounties() {
     .slice(0, 4);
 
   return (
-    <section className="relative isolate mt-16 overflow-hidden bg-navy-900 py-14 text-white sm:mt-24 sm:py-20">
+    <section className="dark-band relative isolate mt-16 overflow-hidden bg-navy-900 py-14 text-white sm:mt-24 sm:py-20">
       <div aria-hidden className="absolute -right-24 -top-24 -z-10 size-96 rounded-full bg-gold-500/20 blur-3xl" />
       <div aria-hidden className="absolute -bottom-32 -left-24 -z-10 size-96 rounded-full bg-coral-500/20 blur-3xl" />
       <Container>

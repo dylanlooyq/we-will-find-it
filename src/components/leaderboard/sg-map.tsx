@@ -92,7 +92,7 @@ export function AreaMap({
 }) {
   const topAreaId = useMemo(() => [...leaders].sort((a, b) => b.points - a.points)[0]?.areaId, [leaders]);
   return (
-    <div className="relative overflow-hidden rounded-card bg-gradient-to-b from-sky to-[#dce8fb] shadow-soft">
+    <div className="relative overflow-hidden rounded-card bg-gradient-to-b from-sky to-sky-deep shadow-soft">
       <div className="relative mx-auto" style={{ aspectRatio: `${W} / ${H}` }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 h-full w-full" aria-hidden>
           <defs>

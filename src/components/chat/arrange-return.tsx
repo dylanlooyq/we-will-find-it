@@ -47,7 +47,7 @@ export function ArrangeReturn({ open, onClose, convId, item }: { open: boolean; 
   return (
     <Overlay open={open} onClose={onClose} title="Arrange return" description="Pick a busy, public place. MRT customer service counters are ideal.">
       <div className="mt-4 space-y-6">
-        <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-sky to-[#cfe0f7]">
+        <div className="relative h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-sky to-sky-deep">
           <div aria-hidden className="absolute inset-0 opacity-40" style={{ backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)", backgroundSize: "24px 24px" }} />
           <span className="absolute left-1/2 top-1/2 flex size-11 -translate-x-1/2 -translate-y-[65%] items-center justify-center rounded-full bg-coral-600 text-white shadow-lift ring-4 ring-white">
             <MapPin className="size-5" aria-hidden />

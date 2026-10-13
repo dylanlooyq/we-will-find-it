@@ -50,7 +50,7 @@ export function ItemImage({ image, category, className, sizes, priority, compact
     <div
       role="img"
       aria-label={`Image placeholder: ${image.label}`}
-      className={cn("relative overflow-hidden", className)}
+      className={cn("theme-light relative overflow-hidden", className)}
       style={{ backgroundImage: `linear-gradient(135deg, ${cat.tint[0]}, ${cat.tint[1]})` }}
     >
       <div
