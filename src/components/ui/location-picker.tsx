@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Building2, Crosshair, GraduationCap, MapPin, Plane, ShoppingBag, TrainFront, Trees, X } from "lucide-react";
+import { Building2, Crosshair, GraduationCap, MapPin, Plane, ShoppingBag, TrainFront, TramFront, Trees, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { areaById, getLocation, locations } from "@/lib/data/taxonomy";
 import { distanceKm } from "@/lib/geo";
@@ -11,6 +11,7 @@ import { toast } from "@/lib/store/events";
 
 const kindIcon: Record<LocationKind, typeof MapPin> = {
   mrt: TrainFront,
+  lrt: TramFront,
   mall: ShoppingBag,
   park: Trees,
   campus: GraduationCap,

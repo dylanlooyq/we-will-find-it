@@ -85,7 +85,7 @@ export const locations: Location[] = [
   { id: "jurong-east-mrt", name: "Jurong East MRT", area: "jurong", kind: "mrt", lat: 1.3331, lng: 103.7422, detail: "North-South & East-West Lines" },
   { id: "jem", name: "JEM", area: "jurong", kind: "mall", lat: 1.3331, lng: 103.7435, detail: "Jurong Gateway" },
   { id: "ntu", name: "NTU", area: "jurong", kind: "campus", lat: 1.3483, lng: 103.6831, detail: "Nanyang Avenue" },
-  // Every other MRT station and the larger malls, parks, campuses, hospitals and landmarks (see places.ts).
+  // Every other MRT and LRT station and the larger malls, parks, campuses, hospitals and landmarks (see places.ts).
   ...places,
 ];
 

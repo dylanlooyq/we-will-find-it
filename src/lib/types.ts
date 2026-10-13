@@ -68,7 +68,7 @@ export interface Area {
   lng: number;
 }
 
-export type LocationKind = "mrt" | "mall" | "park" | "campus" | "airport" | "landmark" | "neighbourhood";
+export type LocationKind = "mrt" | "lrt" | "mall" | "park" | "campus" | "airport" | "landmark" | "neighbourhood";
 
 export interface Location {
   id: string;

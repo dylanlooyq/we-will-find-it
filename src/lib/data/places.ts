@@ -1,7 +1,7 @@
 import type { Location } from "../types";
 
 /**
- * Every MRT station, and the larger malls, parks, campuses, hospitals and landmarks, beyond the
+ * Every MRT and LRT station, and the larger malls, parks, campuses, hospitals and landmarks, beyond the
  * handful written by hand in taxonomy.ts. Coordinates are OneMap's (onemap.gov.sg); each place is
  * filed under the nearest of our areas.
  *
@@ -138,6 +138,44 @@ export const places: Location[] = [
   { id: "woodleigh-mrt", name: "Woodleigh MRT", area: "toa-payoh", kind: "mrt", lat: 1.3392, lng: 103.8708, detail: "North-East Line" },
   { id: "yew-tee-mrt", name: "Yew Tee MRT", area: "woodlands", kind: "mrt", lat: 1.3975, lng: 103.7474, detail: "North-South Line" },
   { id: "yio-chu-kang-mrt", name: "Yio Chu Kang MRT", area: "ang-mo-kio", kind: "mrt", lat: 1.3818, lng: 103.8449, detail: "North-South Line" },
+  { id: "bakau-lrt", name: "Bakau LRT", area: "sengkang", kind: "lrt", lat: 1.388, lng: 103.9054, detail: "Sengkang LRT, East Loop" },
+  { id: "bangkit-lrt", name: "Bangkit LRT", area: "jurong", kind: "lrt", lat: 1.38, lng: 103.7726, detail: "Bukit Panjang LRT" },
+  { id: "cheng-lim-lrt", name: "Cheng Lim LRT", area: "sengkang", kind: "lrt", lat: 1.3963, lng: 103.8938, detail: "Sengkang LRT, West Loop" },
+  { id: "compassvale-lrt", name: "Compassvale LRT", area: "punggol", kind: "lrt", lat: 1.3945, lng: 103.9005, detail: "Sengkang LRT, East Loop" },
+  { id: "coral-edge-lrt", name: "Coral Edge LRT", area: "punggol", kind: "lrt", lat: 1.3939, lng: 103.9126, detail: "Punggol LRT, East Loop" },
+  { id: "cove-lrt", name: "Cove LRT", area: "punggol", kind: "lrt", lat: 1.3993, lng: 103.906, detail: "Punggol LRT, East Loop" },
+  { id: "damai-lrt", name: "Damai LRT", area: "punggol", kind: "lrt", lat: 1.4052, lng: 103.9086, detail: "Punggol LRT, East Loop" },
+  { id: "fajar-lrt", name: "Fajar LRT", area: "woodlands", kind: "lrt", lat: 1.3846, lng: 103.7709, detail: "Bukit Panjang LRT" },
+  { id: "farmway-lrt", name: "Farmway LRT", area: "sengkang", kind: "lrt", lat: 1.3972, lng: 103.8893, detail: "Sengkang LRT, West Loop" },
+  { id: "fernvale-lrt", name: "Fernvale LRT", area: "sengkang", kind: "lrt", lat: 1.3919, lng: 103.8763, detail: "Sengkang LRT, West Loop" },
+  { id: "jelapang-lrt", name: "Jelapang LRT", area: "woodlands", kind: "lrt", lat: 1.3867, lng: 103.7645, detail: "Bukit Panjang LRT" },
+  { id: "kadaloor-lrt", name: "Kadaloor LRT", area: "punggol", kind: "lrt", lat: 1.3995, lng: 103.9166, detail: "Punggol LRT, East Loop" },
+  { id: "kangkar-lrt", name: "Kangkar LRT", area: "sengkang", kind: "lrt", lat: 1.384, lng: 103.9022, detail: "Sengkang LRT, East Loop" },
+  { id: "keat-hong-lrt", name: "Keat Hong LRT", area: "jurong", kind: "lrt", lat: 1.3786, lng: 103.7491, detail: "Bukit Panjang LRT" },
+  { id: "kupang-lrt", name: "Kupang LRT", area: "sengkang", kind: "lrt", lat: 1.3982, lng: 103.8813, detail: "Sengkang LRT, West Loop" },
+  { id: "layar-lrt", name: "Layar LRT", area: "sengkang", kind: "lrt", lat: 1.3921, lng: 103.88, detail: "Sengkang LRT, West Loop" },
+  { id: "meridian-lrt", name: "Meridian LRT", area: "punggol", kind: "lrt", lat: 1.3969, lng: 103.909, detail: "Punggol LRT, East Loop" },
+  { id: "nibong-lrt", name: "Nibong LRT", area: "punggol", kind: "lrt", lat: 1.4119, lng: 103.9003, detail: "Punggol LRT, West Loop" },
+  { id: "oasis-lrt", name: "Oasis LRT", area: "punggol", kind: "lrt", lat: 1.4023, lng: 103.9127, detail: "Punggol LRT, East Loop" },
+  { id: "pending-lrt", name: "Pending LRT", area: "jurong", kind: "lrt", lat: 1.3761, lng: 103.7713, detail: "Bukit Panjang LRT" },
+  { id: "petir-lrt", name: "Petir LRT", area: "jurong", kind: "lrt", lat: 1.3778, lng: 103.7666, detail: "Bukit Panjang LRT" },
+  { id: "phoenix-lrt", name: "Phoenix LRT", area: "jurong", kind: "lrt", lat: 1.3786, lng: 103.758, detail: "Bukit Panjang LRT" },
+  { id: "punggol-point-lrt", name: "Punggol Point LRT", area: "punggol", kind: "lrt", lat: 1.4168, lng: 103.9067, detail: "Punggol LRT, West Loop" },
+  { id: "ranggung-lrt", name: "Ranggung LRT", area: "sengkang", kind: "lrt", lat: 1.3842, lng: 103.8972, detail: "Sengkang LRT, East Loop" },
+  { id: "renjong-lrt", name: "Renjong LRT", area: "sengkang", kind: "lrt", lat: 1.3867, lng: 103.8906, detail: "Sengkang LRT, West Loop" },
+  { id: "riviera-lrt", name: "Riviera LRT", area: "punggol", kind: "lrt", lat: 1.3945, lng: 103.9162, detail: "Punggol LRT, East Loop" },
+  { id: "rumbia-lrt", name: "Rumbia LRT", area: "punggol", kind: "lrt", lat: 1.3915, lng: 103.906, detail: "Sengkang LRT, East Loop" },
+  { id: "sam-kee-lrt", name: "Sam Kee LRT", area: "punggol", kind: "lrt", lat: 1.4096, lng: 103.9048, detail: "Punggol LRT, West Loop" },
+  { id: "samudera-lrt", name: "Samudera LRT", area: "punggol", kind: "lrt", lat: 1.4159, lng: 103.9022, detail: "Punggol LRT, West Loop" },
+  { id: "segar-lrt", name: "Segar LRT", area: "woodlands", kind: "lrt", lat: 1.3878, lng: 103.7696, detail: "Bukit Panjang LRT" },
+  { id: "senja-lrt", name: "Senja LRT", area: "jurong", kind: "lrt", lat: 1.3827, lng: 103.7623, detail: "Bukit Panjang LRT" },
+  { id: "soo-teck-lrt", name: "Soo Teck LRT", area: "punggol", kind: "lrt", lat: 1.4053, lng: 103.8973, detail: "Punggol LRT, West Loop" },
+  { id: "south-view-lrt", name: "South View LRT", area: "jurong", kind: "lrt", lat: 1.3803, lng: 103.7453, detail: "Bukit Panjang LRT" },
+  { id: "sumang-lrt", name: "Sumang LRT", area: "punggol", kind: "lrt", lat: 1.4085, lng: 103.8986, detail: "Punggol LRT, West Loop" },
+  { id: "teck-lee-lrt", name: "Teck Lee LRT", area: "punggol", kind: "lrt", lat: 1.4128, lng: 103.9066, detail: "Punggol LRT, West Loop" },
+  { id: "teck-whye-lrt", name: "Teck Whye LRT", area: "jurong", kind: "lrt", lat: 1.3767, lng: 103.7537, detail: "Bukit Panjang LRT" },
+  { id: "thanggam-lrt", name: "Thanggam LRT", area: "sengkang", kind: "lrt", lat: 1.3973, lng: 103.8756, detail: "Sengkang LRT, West Loop" },
+  { id: "tongkang-lrt", name: "Tongkang LRT", area: "sengkang", kind: "lrt", lat: 1.3893, lng: 103.8858, detail: "Sengkang LRT, West Loop" },
   { id: "plaza-singapura", name: "Plaza Singapura", area: "city", kind: "mall", lat: 1.3007, lng: 103.845, detail: "Orchard Road" },
   { id: "ngee-ann-city", name: "Ngee Ann City", area: "orchard", kind: "mall", lat: 1.3022, lng: 103.8352, detail: "Takashimaya" },
   { id: "paragon", name: "Paragon", area: "orchard", kind: "mall", lat: 1.3039, lng: 103.8359, detail: "Orchard Road" },

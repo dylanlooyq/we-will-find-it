@@ -1,4 +1,4 @@
-// Writes src/lib/data/places.ts: every MRT station plus the larger malls, parks, campuses, hospitals
+// Writes src/lib/data/places.ts: every MRT and LRT station plus the larger malls, parks, campuses, hospitals
 // and landmarks, with coordinates from OneMap (onemap.gov.sg, the Singapore Land Authority's map).
 //
 //   node scripts/fetch-places.mjs             look up only what the file doesn't have yet
@@ -170,14 +170,17 @@ const PLACES = [
   ["Ng Teng Fong General Hospital", "landmark", "NG TENG FONG GENERAL HOSPITAL", "NTFGH"],
 ];
 
-/** Lines by station-code prefix. Codes for lines that aren't running yet (and LRT loops) are ignored. */
+/** MRT lines by station-code prefix. Codes for lines that aren't running yet are ignored. */
 const LINES = { NS: "North-South", EW: "East-West", CG: "East-West", NE: "North-East", CC: "Circle", CE: "Circle", DT: "Downtown", TE: "Thomson-East Coast" };
+/** LRT networks, the same way. */
+const LOOPS = { BP: "Bukit Panjang LRT", SE: "Sengkang LRT, East Loop", SW: "Sengkang LRT, West Loop", STC: "Sengkang LRT", PE: "Punggol LRT, East Loop", PW: "Punggol LRT, West Loop", PTC: "Punggol LRT" };
 /**
  * On OneMap, but no trains stop there. Bukit Brown, Mount Pleasant and Marina South are shells for
- * later. Bedok South, Sungei Bedok and Xilin were due in the second half of 2026 with no date
- * announced when this was last run (October 2026) — take them off this list once they are open.
+ * later; Ten Mile Junction closed in 2019. Bedok South, Sungei Bedok and Xilin were due in the second
+ * half of 2026 with no date announced when this was last run (October 2026) — take them off this
+ * list once they are open.
  */
-const NOT_OPEN = new Set(["BUKIT BROWN", "MOUNT PLEASANT", "MARINA SOUTH", "BEDOK SOUTH", "SUNGEI BEDOK", "XILIN"]);
+const NOT_OPEN = new Set(["BUKIT BROWN", "MOUNT PLEASANT", "MARINA SOUTH", "TEN MILE JUNCTION", "BEDOK SOUTH", "SUNGEI BEDOK", "XILIN"]);
 const SPELLING = { "One-North": "one-north", Harbourfront: "HarbourFront", Macpherson: "MacPherson", "Gardens By The Bay": "Gardens by the Bay" };
 
 /** Between requests, to stay under OneMap's rate limit. */
@@ -225,33 +228,49 @@ if (!process.argv.includes("--refresh") && existsSync(OUT)) {
 const out = [];
 const problems = [];
 
-// ── MRT stations: every "… MRT STATION (codes)" OneMap knows, exits and the like left out ──
-const stations = new Map();
-const keptStations = [...known.values()].filter((p) => p.kind === "mrt" && !NOT_OPEN.has(p.id.replace(/-mrt$/, "").replace(/-/g, " ").toUpperCase()));
-out.push(...keptStations);
-const first = keptStations.length ? { totalNumPages: 0 } : await search("MRT STATION");
-for (let page = 1; page <= first.totalNumPages; page++) {
-  const { results } = page === 1 ? first : await search("MRT STATION", page);
-  for (const r of results) {
-    const m = r.SEARCHVAL.match(/^(.+) MRT STATION \(([A-Z0-9 /]+)\)$/);
-    if (!m || NOT_OPEN.has(m[1])) continue;
-    const s = stations.get(m[1]) ?? { codes: new Set(), points: [] };
-    for (const c of m[2].split("/")) s.codes.add(c.trim());
-    s.points.push({ lat: +r.LATITUDE, lng: +r.LONGITUDE });
-    stations.set(m[1], s);
+// ── Stations: every "… MRT STATION (codes)" and "… LRT STATION (codes)" OneMap knows, exits left out ──
+
+/** The second line for a station, from its codes — or nothing if none of its lines is running. */
+const DETAIL = {
+  mrt(codes) {
+    const lines = [...new Set(codes.map((c) => LINES[c.replace(/\d+[A-Z]?$/, "")]).filter(Boolean))];
+    return lines.length > 2 ? `${lines.length} lines` : lines.length === 2 ? `${lines[0]} & ${lines[1]} Lines` : lines[0] && `${lines[0]} Line`;
+  },
+  lrt: (codes) => codes.map((c) => LOOPS[c.replace(/\d+$/, "")]).find(Boolean),
+};
+
+for (const kind of ["mrt", "lrt"]) {
+  const type = kind.toUpperCase();
+  const before = out.length;
+  const kept = [...known.values()].filter((p) => p.kind === kind && !NOT_OPEN.has(p.id.replace(/-[a-z]+$/, "").replace(/-/g, " ").toUpperCase()));
+  out.push(...kept);
+
+  const stations = new Map();
+  const first = kept.length ? { totalNumPages: 0 } : await search(`${type} STATION`);
+  for (let page = 1; page <= first.totalNumPages; page++) {
+    const { results } = page === 1 ? first : await search(`${type} STATION`, page);
+    for (const r of results) {
+      const m = r.SEARCHVAL.match(new RegExp(`^(.+) ${type} STATION \\(([A-Z0-9 /]+)\\)$`));
+      if (!m || NOT_OPEN.has(m[1])) continue;
+      const s = stations.get(m[1]) ?? { codes: new Set(), points: [] };
+      for (const c of m[2].split("/")) s.codes.add(c.trim());
+      s.points.push({ lat: +r.LATITUDE, lng: +r.LONGITUDE });
+      stations.set(m[1], s);
+    }
+    await sleep(PAUSE);
   }
-  await sleep(PAUSE);
+  for (const [raw, s] of [...stations].sort(([a], [b]) => a.localeCompare(b))) {
+    const detail = DETAIL[kind]([...s.codes]);
+    if (!detail) continue;
+    // An LRT stop inside an MRT station (Sengkang, Punggol…) is the same place to meet or lose something.
+    const mrt = `${slug(raw)}-mrt`;
+    if (kind === "lrt" && (byHand.has(mrt) || out.some((p) => p.id === mrt))) continue;
+    const title = titleCase(raw);
+    const at = { lat: s.points.reduce((n, p) => n + p.lat, 0) / s.points.length, lng: s.points.reduce((n, p) => n + p.lng, 0) / s.points.length };
+    out.push({ id: `${slug(raw)}-${kind}`, name: `${SPELLING[title] ?? title} ${type}`, area: areaOf(at), kind, lat: round(at.lat), lng: round(at.lng), detail });
+  }
+  console.log(`${out.length - before} ${type} stations`);
 }
-for (const [raw, s] of [...stations].sort(([a], [b]) => a.localeCompare(b))) {
-  const lines = [...new Set([...s.codes].map((c) => LINES[c.replace(/\d+[A-Z]?$/, "")]).filter(Boolean))];
-  if (!lines.length) continue; // only on a line that isn't open
-  const title = titleCase(raw);
-  const name = `${SPELLING[title] ?? title} MRT`;
-  const at = { lat: s.points.reduce((n, p) => n + p.lat, 0) / s.points.length, lng: s.points.reduce((n, p) => n + p.lng, 0) / s.points.length };
-  const detail = lines.length === 1 ? `${lines[0]} Line` : lines.length === 2 ? `${lines[0]} & ${lines[1]} Lines` : `${lines.length} lines`;
-  out.push({ id: `${slug(raw)}-mrt`, name, area: areaOf(at), kind: "mrt", lat: round(at.lat), lng: round(at.lng), detail });
-}
-console.log(`${out.length} MRT stations`);
 
 // ── Named places: the first OneMap result whose name matches ──
 for (const [name, kind, q, detail] of PLACES) {
@@ -282,7 +301,7 @@ writeFileSync(
   `import type { Location } from "../types";
 
 /**
- * Every MRT station, and the larger malls, parks, campuses, hospitals and landmarks, beyond the
+ * Every MRT and LRT station, and the larger malls, parks, campuses, hospitals and landmarks, beyond the
  * handful written by hand in taxonomy.ts. Coordinates are OneMap's (onemap.gov.sg); each place is
  * filed under the nearest of our areas.
  *
